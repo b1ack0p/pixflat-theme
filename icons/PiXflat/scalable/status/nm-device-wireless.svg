@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="48"
+   height="48"
+   viewBox="0 0 12.7 12.7"
+   version="1.1"
+   id="svg5"
+   xml:space="preserve"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   sodipodi:docname="nm-device-wireless.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"><sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     showgrid="true"
+     inkscape:zoom="16.125"
+     inkscape:cx="23.968992"
+     inkscape:cy="24"
+     inkscape:window-width="1680"
+     inkscape:window-height="985"
+     inkscape:window-x="0"
+     inkscape:window-y="36"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1"><inkscape:grid
+       type="xygrid"
+       id="grid292" /></sodipodi:namedview><defs
+     id="defs2" /><g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"><ellipse
+       style="fill:none;stroke:#0fa6fd;stroke-width:1.05833;stroke-dasharray:none;stroke-opacity:1"
+       id="path1078"
+       cx="6.3508549"
+       cy="9.5163021"
+       rx="1.0583334"
+       ry="1.0583336" /><path
+       style="fill:none;stroke:#0fa6fd;stroke-width:1.05834;stroke-linecap:butt;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill"
+       d="m 1.4376365,4.2618579 c 0,0 4.544314,-4.86471299 9.8420815,0.00325"
+       id="path1040" /><path
+       style="fill:none;stroke:#0fa6fd;stroke-width:1.05833;stroke-linecap:butt;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill"
+       d="m 2.7296928,5.6229639 c 0,0 3.2742548,-3.1400047 7.2547739,-0.012378"
+       id="path1294" /><path
+       style="fill:none;stroke:#0fa6fd;stroke-width:1.05833;stroke-linecap:butt;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill"
+       d="m 4.311746,7.113051 c 0,0 2.0043563,-1.7512545 4.0732426,0.017616"
+       id="path1298" /></g></svg>

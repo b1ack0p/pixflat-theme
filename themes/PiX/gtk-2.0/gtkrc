@@ -1,0 +1,1139 @@
+# PiX gtk+-2.0 theme. Based on Adwaita and Clearlooks - modified by Simon Long (simon@raspberypi.org)
+
+# Colour scheme
+gtk-color-scheme = "base_color:#FFFFFF\nfg_color:#2E3436\nbg_color:#EDEDED\ntext_color:#313739\nselected_fg_color:#FFFFFF\nselected_bg_color:#4D98F5\ninsensitive_bg_color:#F4F4F2\ntooltip_fg_color:#FFFFFF\ntooltip_bg_color:#A0A0A0\nbar_bg_color:#EDECEB\nbar_fg_color:#000000"
+
+# Enable auto-mnemonics
+gtk-auto-mnemonics = 1
+
+# Enable click in scrollbar to move to clicked location
+gtk-primary-button-warps-slider = 0
+
+# Default widget style
+
+style "default"
+{
+	xthickness = 1
+	ythickness = 1
+
+	# Properties
+
+	GtkWidget::focus-line-width                 = 1
+	GtkWidget::tooltip-radius		            = 3
+	GtkWidget::tooltip-alpha		            = 255
+	GtkWidget::new-tooltip-style	            = 1
+
+	GtkMenuBar::window-dragging                 = 1
+	GtkMenuBar::shadow-type		                = GTK_SHADOW_NONE
+	GtkMenuBar::internal-padding	            = 0
+
+	GtkToolbar::window-dragging                 = 1
+	GtkToolbar::shadow-type		                = GTK_SHADOW_NONE
+	GtkToolbar::internal-padding	            = 4
+
+	GtkToolButton::icon-spacing		            = 4
+
+	GtkSeparatorMenuItem::horizontal-padding    = 3
+	GtkSeparatorMenuItem::wide-separators       = 1
+	GtkSeparatorMenuItem::separator-height      = 1
+
+	GtkButton::child-displacement-y             = 0
+	GtkButton::default-border	                = { 0, 0, 0, 0 }
+	GtkButton::default-outside_border		    = { 0, 0, 0, 0 }
+
+	GtkRange::trough-border		                = 0
+	GtkRange::slider-width		                = 13
+	GtkRange::stepper-size		                = 13
+
+	GtkScrollbar::trough-border                 = 0
+	GtkScrollbar::activate-slider				= 1
+	GtkScrollbar::has-backward-stepper		    = 1
+	GtkScrollbar::has-forward-stepper		    = 1
+	GtkScrollbar::min-slider-length				= 42
+
+	GtkScrolledWindow::scrollbar-spacing		= 0
+	GtkScrolledWindow::scrollbars-within-bevel	= 1
+
+	GtkVScale::slider_length	                = 24
+	GtkVScale::slider_width		                = 24
+
+	GtkHScale::slider_length	                = 24
+	GtkHScale::slider_width		                = 24
+
+	GtkScale::trough-side-details               = 1
+
+	GtkProgressBar::min-horizontal-bar-height   = 2
+	GtkProgressBar::min-vertical-bar-width      = 2
+
+	GtkStatusbar::shadow_type	                = GTK_SHADOW_NONE
+
+	GtkSpinButton::shadow_type	                = GTK_SHADOW_IN
+
+	GtkMenu::horizontal-padding                 = 0
+	GtkMenu::vertical-padding	                = 0
+
+	GtkCheckButton::indicator_spacing	        = 3
+
+	GtkOptionMenu::indicator_spacing	        = { 8, 2, 0, 0 }
+
+	GtkTreeView::row_ending_details		        = 0
+	GtkTreeView::expander-size		            = 11
+	GtkTreeView::vertical-separator		        = 4
+	GtkTreeView::horizontal-separator	        = 4
+	GtkTreeView::allow-rules		            = 0
+
+	GtkExpander::expander-size				    = 11
+
+	GtkHButtonBox::child-min-height             = 0
+
+	# Colours
+
+	bg[NORMAL]			= @bg_color
+	bg[PRELIGHT]		= shade (1.02, @bg_color)
+	bg[SELECTED]		= @selected_bg_color
+	bg[INSENSITIVE]		= @bg_color
+	bg[ACTIVE]			= shade (0.9, @bg_color)
+
+	fg[NORMAL]			= @text_color
+	fg[PRELIGHT]		= @fg_color
+	fg[SELECTED]		= @selected_fg_color
+	fg[INSENSITIVE]		= darker (@bg_color)
+	fg[ACTIVE]			= @fg_color
+
+	text[NORMAL]		= @text_color
+	text[PRELIGHT]		= @text_color
+	text[SELECTED]		= @selected_fg_color
+	text[INSENSITIVE]	= darker (@bg_color)
+	text[ACTIVE]		= @selected_fg_color
+
+	base[NORMAL]		= @base_color
+	base[PRELIGHT]		= shade (0.95, @bg_color)
+	base[SELECTED]		= @selected_bg_color
+	base[INSENSITIVE]	= @bg_color
+	base[ACTIVE]		= @selected_bg_color
+
+	# Pixmap engine graphics
+
+	engine "pixmap"
+	{
+		# Arrows
+
+		image
+		{
+				function			= ARROW
+				state				= NORMAL
+				overlay_file		= "Arrows/arrow-up.png"
+				overlay_border		= { 0, 0, 0, 0 }
+				overlay_stretch		= FALSE
+				arrow_direction		= UP
+		}
+		image
+		{
+				function			= ARROW
+				state				= PRELIGHT
+				overlay_file		= "Arrows/arrow-up-prelight.png"
+				overlay_border		= { 0, 0, 0, 0 }
+				overlay_stretch		= FALSE
+				arrow_direction		= UP
+		}
+		image
+		{
+				function			= ARROW
+				state				= ACTIVE
+				overlay_file		= "Arrows/arrow-up-prelight.png"
+				overlay_border		= { 0, 0, 0, 0 }
+				overlay_stretch		= FALSE
+				arrow_direction		= UP
+		}
+		image
+		{
+				function			= ARROW
+				state				= INSENSITIVE
+				overlay_file		= "Arrows/arrow-up-insens.png"
+				overlay_border		= { 0, 0, 0, 0 }
+				overlay_stretch		= FALSE
+				arrow_direction		= UP
+		}
+
+		image
+		{
+				function			= ARROW
+				state				= NORMAL
+				overlay_file		= "Arrows/arrow-down.png"
+				overlay_border		= { 0, 0, 0, 0 }
+				overlay_stretch		= FALSE
+				arrow_direction		= DOWN
+		}
+		image
+		{
+				function			= ARROW
+				state				= PRELIGHT
+				overlay_file		= "Arrows/arrow-down-prelight.png"
+				overlay_border		= { 0, 0, 0, 0 }
+				overlay_stretch		= FALSE
+				arrow_direction		= DOWN
+		}
+		image
+		{
+				function			= ARROW
+				state				= ACTIVE
+				overlay_file		= "Arrows/arrow-down-prelight.png"
+				overlay_border		= { 0, 0, 0, 0 }
+				overlay_stretch		= FALSE
+				arrow_direction		= DOWN
+		}
+		image
+		{
+				function			= ARROW
+				state				= INSENSITIVE
+				overlay_file		= "Arrows/arrow-down-insens.png"
+				overlay_border		= { 0, 0, 0, 0 }
+				overlay_stretch		= FALSE
+				arrow_direction		= DOWN
+		}
+
+		image
+		{
+				function			= ARROW
+				state				= NORMAL
+				overlay_file		= "Arrows/arrow-left.png"
+				overlay_border		= { 0, 0, 0, 0 }
+				overlay_stretch		= FALSE
+				arrow_direction		= LEFT
+		}
+		image
+		{
+				function			= ARROW
+				state				= PRELIGHT
+				overlay_file		= "Arrows/arrow-left-prelight.png"
+				overlay_border		= { 0, 0, 0, 0 }
+				overlay_stretch		= FALSE
+				arrow_direction		= LEFT
+		}
+		image
+		{
+				function			= ARROW
+				state				= ACTIVE
+				overlay_file		= "Arrows/arrow-left-prelight.png"
+				overlay_border		= { 0, 0, 0, 0 }
+				overlay_stretch		= FALSE
+				arrow_direction		= LEFT
+		}
+		image
+		{
+				function			= ARROW
+				state				= INSENSITIVE
+				overlay_file		= "Arrows/arrow-left-insens.png"
+				overlay_border		= { 0, 0, 0, 0 }
+				overlay_stretch		= FALSE
+				arrow_direction		= LEFT
+		}
+
+		image
+		{
+				function			= ARROW
+				state				= NORMAL
+				overlay_file		= "Arrows/arrow-right.png"
+				overlay_border		= { 0, 0, 0, 0 }
+				overlay_stretch		= FALSE
+				arrow_direction		= RIGHT
+		}
+		image
+		{
+				function			= ARROW
+				state				= PRELIGHT
+				overlay_file		= "Arrows/arrow-right-prelight.png"
+				overlay_border		= { 0, 0, 0, 0 }
+				overlay_stretch		= FALSE
+				arrow_direction		= RIGHT
+		}
+		image
+		{
+				function			= ARROW
+				state				= ACTIVE
+				overlay_file		= "Arrows/arrow-right-prelight.png"
+				overlay_border		= { 0, 0, 0, 0 }
+				overlay_stretch		= FALSE
+				arrow_direction		= RIGHT
+		}
+		image
+		{
+				function			= ARROW
+				state				= INSENSITIVE
+				overlay_file		= "Arrows/arrow-right-insens.png"
+				overlay_border		= { 0, 0, 0, 0 }
+				overlay_stretch		= FALSE
+				arrow_direction		= RIGHT
+		}
+
+
+		# Option Menu Arrows
+
+		image
+		{
+				function			= TAB
+				state				= INSENSITIVE
+				overlay_file		= "Arrows/arrow-down-insens.png"
+				overlay_stretch		= FALSE
+		}
+		image
+		{
+				function			= TAB
+				state				= NORMAL
+				overlay_file		= "Arrows/arrow-down.png"
+				overlay_border		= { 0, 0, 0, 0 }
+				overlay_stretch		= FALSE
+		}
+		image
+		{
+				function			= TAB
+				state				= PRELIGHT
+				overlay_file		= "Arrows/arrow-down-prelight.png"
+				overlay_border		= { 0, 0, 0, 0 }
+				overlay_stretch		= FALSE
+		}
+
+		# Lines
+
+		image
+		{
+				function			= VLINE
+				file				= "Lines/line-v.png"
+				border				= { 0, 0, 0, 0 }
+				stretch				= TRUE
+		}
+		image
+		{
+				function			= HLINE
+				file				= "Lines/line-h.png"
+				border				= { 0, 0, 0, 0 }
+				stretch				= TRUE
+		}
+
+		# Focuslines
+
+		image
+		{
+				function			= FOCUS
+				file				= "Others/focus.png"
+				border				= { 1, 1, 1, 1 }
+				stretch				= TRUE
+		}
+
+		# Handles
+
+		image
+		{
+				function			= HANDLE
+				overlay_file		= "Handles/handle-h.png"
+				overlay_stretch		= FALSE
+				orientation			= HORIZONTAL
+		}
+		image
+		{
+				function			= HANDLE
+				overlay_file		= "Handles/handle-v.png"
+				overlay_stretch		= FALSE
+				orientation			= VERTICAL
+		}
+
+		# Expanders
+
+		image
+		{
+				function			= EXPANDER
+				expander_style		= COLLAPSED
+				file				= "Expanders/plus.png"
+		}
+		image
+		{
+				function			= EXPANDER
+				expander_style		= EXPANDED
+				file				= "Expanders/minus.png"
+		}
+		image
+		{
+				function			= EXPANDER
+				expander_style		= SEMI_EXPANDED
+				file				= "Expanders/minus.png"
+		}
+		image
+		{
+				function			= EXPANDER
+				expander_style		= SEMI_COLLAPSED
+				file				= "Expanders/plus.png"
+		}
+	
+		# Others
+	
+		image
+		{
+				function			= RESIZE_GRIP
+				state				= NORMAL
+				detail				= "statusbar"
+				overlay_file		= "Others/null.png"
+				overlay_border		= { 0,0,0,0 }
+				overlay_stretch		= FALSE
+		}
+
+	}
+}
+
+style "menu_item"
+{
+	xthickness	= 2
+	ythickness	= 3
+
+	bg[PRELIGHT]	= @selected_bg_color
+	fg[PRELIGHT]	= @selected_fg_color
+	text[PRELIGHT]	= @selected_fg_color
+
+	engine "pixmap"
+	{
+		# Check Buttons
+
+		image
+		{
+			function				= CHECK
+			recolorable				= TRUE
+			state					= NORMAL
+			shadow					= OUT
+			overlay_file			= "Others/null.png"
+			overlay_stretch			= FALSE
+		}
+		image
+		{
+			function				= CHECK
+			recolorable				= TRUE
+			state					= PRELIGHT
+			shadow					= OUT
+			overlay_file			= "Others/null.png"
+			overlay_stretch			= FALSE
+		}
+		image
+		{
+			function				= CHECK
+			recolorable				= TRUE
+			state					= ACTIVE
+			shadow					= OUT
+			overlay_file			= "Others/null.png"
+			overlay_stretch			= FALSE
+		}
+		image
+		{
+			function				= CHECK
+			recolorable				= TRUE
+			state					= INSENSITIVE
+			shadow					= OUT
+			overlay_file			= "Others/null.png"
+			overlay_stretch			= FALSE
+		}
+		image
+		{
+			function				= CHECK
+			recolorable				= TRUE
+			state					= NORMAL
+			shadow					= IN
+			overlay_file			= "Check-Radio/menucheck.png"
+			overlay_stretch			= FALSE
+		}
+		image
+		{
+			function				= CHECK
+			recolorable				= TRUE
+			state					= PRELIGHT
+			shadow					= IN
+			overlay_file			= "Check-Radio/menucheck_prelight.png"
+			overlay_stretch			= FALSE
+		}
+		image
+		{
+			function				= CHECK
+			recolorable				= TRUE
+			state					= ACTIVE
+			shadow					= IN
+			overlay_file			= "Check-Radio/menucheck.png"
+			overlay_stretch			= FALSE
+		}
+		image
+		{
+			function				= CHECK
+			recolorable				= TRUE
+			state					= INSENSITIVE
+			shadow					= IN
+			overlay_file			= "Others/null.png"
+			overlay_stretch			= FALSE
+		}
+
+		# Radio Buttons
+
+		image
+		{
+			function				= OPTION
+			state					= NORMAL
+			shadow					= OUT
+			overlay_file			= "Others/null.png"
+			overlay_stretch			= FALSE
+		}
+		image
+		{
+			function				= OPTION
+			state					= PRELIGHT
+			shadow					= OUT
+			overlay_file			= "Others/null.png"
+			overlay_stretch			= FALSE
+		}
+		image
+		{
+			function				= OPTION
+			state					= ACTIVE
+			shadow					= OUT
+			overlay_file			= "Others/null.png"
+			overlay_stretch			= FALSE
+		}
+		image
+		{
+			function				= OPTION
+			state					= INSENSITIVE
+			shadow					= OUT
+			overlay_file			= "Others/null.png"
+			overlay_stretch			= FALSE
+		}
+		image
+		{
+			function				= OPTION
+			state					= NORMAL
+			shadow					= IN
+			overlay_file			= "Check-Radio/menuoption.png"
+			overlay_stretch			= FALSE
+		}
+		image
+		{
+			function				= OPTION
+			state					= PRELIGHT
+			shadow					= IN
+			overlay_file			= "Check-Radio/menuoption_prelight.png"
+			overlay_stretch			= FALSE
+		}
+		image
+		{
+			function				= OPTION
+			state					= ACTIVE
+			shadow					= IN
+			overlay_file			= "Check-Radio/menuoption.png"
+			overlay_stretch			= FALSE
+		}
+		image
+		{
+			function				= OPTION
+			state					= INSENSITIVE
+			shadow					= IN
+			overlay_file			= "Others/null.png"
+			overlay_stretch			= FALSE
+		}
+
+		# Arrow Buttons
+
+		image
+		{
+			function				= ARROW
+			state					= NORMAL
+			overlay_file			= "Arrows/menu-arrow.png"
+			overlay_border			= { 0, 0, 0, 0 }
+			overlay_stretch			= FALSE
+			arrow_direction			= RIGHT
+		}
+		image
+		{
+			function				= ARROW
+			state					= PRELIGHT
+			overlay_file			= "Arrows/menu-arrow-prelight.png"
+			overlay_border			= { 0, 0, 0, 0 }
+			overlay_stretch			= FALSE
+			arrow_direction			= RIGHT
+		}
+
+		# Shadows
+
+		image
+		{
+			function				= SHADOW
+			file					= "Others/null.png"
+			border					= { 4, 4, 4, 4 }
+			stretch					= TRUE
+		}
+	}
+}
+
+style "menubar"
+{
+	xthickness	= 0
+	ythickness	= 0
+
+	bg[PRELIGHT]	= "#FFF"
+	fg[SELECTED]	= @text_color
+
+	engine "pixmap"
+	{
+		image
+		{
+			function				= BOX
+			recolorable				= TRUE
+			state					= PRELIGHT
+			file					= "Menu-Menubar/menubar_button.png"
+			border					= { 4, 4, 4, 4 }
+			stretch					= TRUE
+		}
+	}
+}
+
+style "menu"
+{
+	xthickness	= 1
+	ythickness	= 1
+
+	bg[NORMAL]		= shade (1.08, @bg_color)
+	bg[INSENSITIVE] = @base_color
+	bg[PRELIGHT]	= @base_color
+
+	GtkMenuItem::arrow-scaling	= 0.4
+
+	engine "clearlookspix"
+	{
+	}
+}
+
+style "menubar_item"
+{
+	xthickness	= 2
+	ythickness	= 3
+	bg[PRELIGHT]	= @selected_fg_color
+	fg[PRELIGHT]	= @text_color
+}
+
+style "checkbutton"
+{
+	bg[PRELIGHT] = @bg_color
+	fg[PRELIGHT] = @text_color
+	fg[ACTIVE]	 = @text_color
+
+	engine "pixmap" {
+
+		# Check Buttons
+
+		image
+		{
+				function				= CHECK
+				recolorable				= TRUE
+				state					= NORMAL
+				shadow					= OUT
+				overlay_file			= "Check-Radio/checkbox-unchecked.png"
+				overlay_stretch			= FALSE
+		}
+		image
+		{
+				function				= CHECK
+				recolorable				= TRUE
+				state					= PRELIGHT
+				shadow					= OUT
+				overlay_file			= "Check-Radio/checkbox-unchecked-hover.png"
+				overlay_stretch			= FALSE
+		}
+		image
+		{
+				function				= CHECK
+				recolorable				= TRUE
+				state					= ACTIVE
+				shadow					= OUT
+				overlay_file			= "Check-Radio/checkbox-unchecked.png"
+				overlay_stretch			= FALSE
+		}
+		image
+		{
+				function				= CHECK
+				recolorable				= TRUE
+				state					= SELECTED
+				shadow					= OUT
+				overlay_file			= "Check-Radio/checkbox-unchecked.png"
+				overlay_stretch			= FALSE
+		}
+		image
+		{
+				function				= CHECK
+				recolorable				= TRUE
+				state					= INSENSITIVE
+				shadow					= OUT
+				overlay_file			= "Check-Radio/checkbox-unchecked-insensitive.png"
+				overlay_stretch			= FALSE
+		}
+		image
+		{
+				function				= CHECK
+				recolorable				= TRUE
+				state					= NORMAL
+				shadow					= IN
+				overlay_file			= "Check-Radio/checkbox-checked.png"
+				overlay_stretch			= FALSE
+		}
+		image
+		{
+				function				= CHECK
+				recolorable				= TRUE
+				state					= PRELIGHT
+				shadow					= IN
+				overlay_file			= "Check-Radio/checkbox-checked-hover.png"
+				overlay_stretch			= FALSE
+		}
+		image
+		{
+				function				= CHECK
+				recolorable				= TRUE
+				state					= ACTIVE
+				shadow					= IN
+				overlay_file			= "Check-Radio/checkbox-checked.png"
+				overlay_stretch			= FALSE
+		}
+		image
+		{
+				function				= CHECK
+				recolorable				= TRUE
+				state					= SELECTED
+				shadow					= IN
+				overlay_file			= "Check-Radio/checkbox-checked.png"
+				overlay_stretch			= FALSE
+		}
+		image
+		{
+				function				= CHECK
+				recolorable				= TRUE
+				state					= INSENSITIVE
+				shadow					= IN
+				overlay_file			= "Check-Radio/checkbox-checked-insensitive.png"
+				overlay_stretch			= FALSE
+		}
+
+		# Radio Buttons
+
+		image
+		{
+				function				= OPTION
+				state					= NORMAL
+				shadow					= OUT
+				overlay_file			= "Check-Radio/option-unchecked.png"
+				overlay_stretch			= FALSE
+		}
+		image
+		{
+				function				= OPTION
+				state					= PRELIGHT
+				shadow					= OUT
+				overlay_file			= "Check-Radio/option-unchecked-hover.png"
+				overlay_stretch			= FALSE
+		}
+		image
+		{
+				function				= OPTION
+				state					= ACTIVE
+				shadow					= OUT
+				overlay_file			= "Check-Radio/option-unchecked.png"
+				overlay_stretch			= FALSE
+		}
+		image
+		{
+				function				= OPTION
+				state					= SELECTED
+				shadow					= OUT
+				overlay_file			= "Check-Radio/option-unchecked.png"
+				overlay_stretch			= FALSE
+		}
+		image
+		{
+				function				= OPTION
+				state					= INSENSITIVE
+				shadow					= OUT
+				overlay_file			= "Check-Radio/option-unchecked-insensitive.png"
+				overlay_stretch			= FALSE
+		}
+		image
+		{
+				function				= OPTION
+				state					= NORMAL
+				shadow					= IN
+				overlay_file			= "Check-Radio/option-checked.png"
+				overlay_stretch			= FALSE
+		}
+		image
+		{
+				function				= OPTION
+				state					= PRELIGHT
+				shadow					= IN
+				overlay_file			= "Check-Radio/option-checked-hover.png"
+				overlay_stretch			= FALSE
+		}
+		image
+		{
+				function				= OPTION
+				state					= ACTIVE
+				shadow					= IN
+				overlay_file			= "Check-Radio/option-checked.png"
+				overlay_stretch			= FALSE
+		}
+		image
+		{
+				function				= OPTION
+				state					= SELECTED
+				shadow					= IN
+				overlay_file			= "Check-Radio/option-checked.png"
+				overlay_stretch			= FALSE
+		}
+		image
+		{
+				function				= OPTION
+				state					= INSENSITIVE
+				shadow					= IN
+				overlay_file			= "Check-Radio/option-checked-insensitive.png"
+				overlay_stretch			= FALSE
+		}
+	}
+}
+
+style "handlebox"
+{
+	engine "pixmap"
+	{
+		image
+		{
+			function					= BOX
+			file						= "Others/null.png"
+			border						= { 4, 4, 4, 4 }
+			stretch						= TRUE
+			detail						= "handlebox_bin"
+			shadow						= IN
+		}
+		image
+		{
+			function					= BOX
+			file						= "Others/null.png"
+			border						= { 4, 4, 4, 4 }
+			stretch						= TRUE
+			detail						= "handlebox_bin"
+			shadow						= OUT
+		}
+	}
+}
+
+style "separator_menu_item" 
+{
+	engine "pixmap"
+	{
+		image
+		{
+			function			= BOX
+			file				= "Lines/menu_line_h.png"
+			border				= { 0, 0, 1, 0 }
+			stretch				= TRUE
+		}
+	}
+}
+
+style "treeview_header"
+{
+	ythickness = 1
+
+	fg[NORMAL] = shade(0.55, @bg_color)
+	fg[PRELIGHT] = shade(0.80, @text_color)
+
+	engine "pixmap"
+	{
+		image
+		{
+			function			= BOX
+			file				= "Others/tree_header.png"
+			border				= { 1, 1, 1, 1 }
+			stretch				= TRUE
+		}
+	}
+}
+
+style "scrolled_window"
+{
+	xthickness = 1
+	ythickness = 1
+
+	engine "pixmap"
+	{
+		image
+		{
+			function			= SHADOW
+			file				= "Shadows/frame.png"
+			border				= { 5, 5, 5, 5 }
+			stretch				= TRUE
+		}
+	}
+}
+
+style "frame"
+{
+    engine "pixmap"
+    {
+		# Frames
+
+		image
+		{
+			function				= SHADOW
+			file					= "Shadows/frame.png"
+			border					= { 1, 1, 1, 1 }
+			stretch					= TRUE
+			shadow					= IN
+		}
+		image
+		{
+			function				= SHADOW_GAP
+			file					= "Shadows/frame.png"
+			border					= { 1, 1, 1, 1 }
+			stretch					= TRUE
+			gap_start_file			= "Shadows/frame-gap-start.png"
+			gap_start_border		= { 1, 0, 0, 0 }
+			gap_end_file			= "Shadows/frame-gap-end.png"
+			gap_end_border			= { 0, 1, 0, 0 }
+			shadow					= IN
+		}
+		image
+		{
+			function				= SHADOW
+			file					= "Shadows/frame.png"
+			border					= { 1, 1, 1, 1 }
+			stretch					= TRUE
+			shadow					= OUT
+		}
+		image
+		{
+			function				= SHADOW_GAP
+			file					= "Shadows/frame.png"
+			border					= { 1, 1, 1, 1 }
+			stretch					= TRUE
+			gap_start_file			= "Shadows/frame-gap-start.png"
+			gap_start_border		= { 1, 0, 0, 0 }
+			gap_end_file			= "Shadows/frame-gap-end.png"
+			gap_end_border			= { 0, 1, 0, 0 }
+			shadow					= OUT
+		}
+		image
+		{
+			function				= SHADOW
+			file					= "Shadows/frame.png"
+			border					= { 1, 1, 1, 1 }
+			stretch					= TRUE
+			shadow					= ETCHED_IN
+		}
+		image
+		{
+			function				= SHADOW_GAP
+			file					= "Shadows/frame.png"
+			border					= { 1, 1, 1, 1 }
+			stretch					= TRUE
+			gap_start_file			= "Shadows/frame-gap-start.png"
+			gap_start_border		= { 1, 0, 0, 0 }
+			gap_end_file			= "Shadows/frame-gap-end.png"
+			gap_end_border			= { 0, 1, 0, 0 }
+			shadow					= ETCHED_IN
+		}
+		image
+		{
+			function				= SHADOW
+			file					= "Shadows/frame.png"
+			border					= { 1, 1, 1, 1 }
+			stretch					= TRUE
+			shadow					= ETCHED_OUT
+		}
+		image
+		{
+			function				= SHADOW_GAP
+			file					= "Shadows/frame.png"
+			border					= { 1, 1, 1, 1 }
+			stretch					= TRUE
+			gap_start_file			= "Shadows/frame-gap-start.png"
+			gap_start_border		= { 1, 0, 0, 0 }
+			gap_end_file			= "Shadows/frame-gap-end.png"
+			gap_end_border			= { 0, 1, 0, 0 }
+			shadow					= ETCHED_OUT
+		}
+    }
+}
+
+style "tooltips"
+{
+	xthickness	= 10
+	ythickness	= 10
+
+	bg[NORMAL]	  = @tooltip_bg_color
+	fg[NORMAL]	  = @tooltip_fg_color
+	bg[SELECTED]  = @tooltip_bg_color
+}
+
+# Theme styles listed below use the modified clearlooks engine
+
+style "scrollbar"
+{
+	engine "clearlookspix" {}
+}
+
+style "clpengine"
+{
+	engine "clearlookspix" {}
+}
+
+style "button"
+{
+	xthickness	= 3
+	ythickness	= 3
+	bg[PRELIGHT]		= shade (1.5, @bg_color)
+
+    engine "clearlookspix" {}
+}
+
+style "colorbutton"
+{
+	xthickness	= 2
+	ythickness	= 2
+	bg[PRELIGHT]		= shade (1.5, @bg_color)
+
+    engine "clearlookspix" {}
+}
+
+style "entry"
+{
+	xthickness	= 4
+	ythickness	= 4
+
+	base[NORMAL]		= @base_color
+	base[INSENSITIVE]	= @insensitive_bg_color
+	base[ACTIVE]		= @base_color
+	text[ACTIVE]		= @text_color
+
+	engine "clearlookspix" {}
+}
+
+style "notebook"
+{
+	xthickness = 5
+	ythickness = 2
+
+	engine "clearlookspix" {}
+}
+
+# Mapping of classes onto styles - do not reorder this section
+
+class "GtkWidget"								style "default"
+
+widget_class "*<GtkButton>*"					style "button"
+widget_class "*<GtkSpinButton>*"				style "button"
+widget_class "*<GtkColorButton>*"				style "colorbutton"
+widget_class "*<GtkCheckButton>*"				style "checkbutton"
+widget_class "*<GtkRadioToolButton>*"           style "button"
+widget_class "*<GtkProgressBar>*"				style "clpengine"
+widget_class "*<GtkComboBox>*"					style "clpengine"
+widget_class "*<GtkFileChooser>*"				style "clpengine"
+widget_class "*<GtkFontButton>*"				style "clpengine"
+widget_class "*<GtkHandleBox>*"					style "handlebox"
+widget_class "*<GtkScrolledWindow>*"			style "scrolled_window"
+widget_class "*<GtkMenuBar>*"					style "menubar"
+widget_class "*<GtkMenu>*"						style "menu"
+widget_class "*<GtkMenuItem>*"					style "menu_item"
+widget_class "*<GtkMenuBar>.<GtkMenuItem>*"		style "menubar_item"
+widget_class "*<GtkSeparatorMenuItem>*"			style "separator_menu_item"
+widget_class "*<GtkNotebook>"					style "notebook"
+widget_class "*<GtkTreeView>*<GtkButton>*"		style "treeview_header"
+widget_class "*<GtkEntry>*"						style "entry"
+widget_class "*<GtkOldEditable>*"				style "entry"
+widget_class "*<GtkRange>*"						style "clpengine"
+widget_class "*<GtkScrollbar>*"					style "scrollbar"
+widget_class "*<GtkFrame>"					    style "frame"
+
+widget "gtk-tooltip*"							style "tooltips"
+
+
+# Customisation for Pi-specific widgets
+
+# Pi LXPanel
+
+style "panel_button" {
+	xthickness = 2
+	ythickness = 2
+
+	GtkButton::child-displacement-x = 0
+	GtkButton::child-displacement-y = 0
+	GtkButton::default-border = {0,0,0,0}
+	GtkButton::default-outside-border = {0,0,0,0}
+	GtkButton::inner-border = {0,0,0,0}
+	GtkWidget::focus-padding = 0
+	GtkWidget::focus-line-width = 0
+	
+	bg[NORMAL]		  = shade (1.04, @bar_bg_color)
+	bg[ACTIVE]		  = shade (0.85, @bar_bg_color)
+	fg[NORMAL]		  = @bar_fg_color
+	fg[ACTIVE]		  = @bar_fg_color
+	bg[PRELIGHT]	  = @selected_bg_color
+	fg[PRELIGHT]	  = @selected_fg_color
+	
+	engine "clearlookspix" {}
+}
+
+style "panel_background" {
+	bg[NORMAL]		  = @bar_bg_color
+}
+
+widget "PanelToplevel" style "panel_background"
+widget "PanelToplevel.*" style "panel_background"
+widget_class "PanelToplevel.*<GtkLabel>" style "panel_button"
+widget_class "PanelToplevel.*<GtkButton>" style "panel_button"
+
+# Pi LXPanel VolumeALSA plugin
+
+style "panel_window" {
+    xthickness = 0
+    ythickness = 0
+
+	bg[NORMAL]      = @base_color
+	bg[PRELIGHT]    = @base_color
+}
+
+style "panel_scale" {
+	bg[NORMAL]      = @bg_color
+}
+
+widget "volals*whitewd*" style "panel_window"
+widget "volals*whitewd*volscale*" style "panel_scale"
+
+# Chromium
+
+style "chrome-gtk-frame"
+{
+    ChromeGtkFrame::frame-color = @bg_color
+    ChromeGtkFrame::inactive-frame-color = @bg_color
+}
+
+class "ChromeGtkFrame" style "chrome-gtk-frame"
+
+# File manager
+
+style "treeview"
+{
+	base[NORMAL] = shade (0.965, @base_color)
+}
+
+class "FmDirTreeView"                           style "treeview"
+
+# Geany search box with no match
+
+style "geany-search-entry-no-match-style-pix" {
+	xthickness	= 2
+	ythickness	= 2
+	font_name = "Monospace"
+	base[NORMAL] = "#ffff66666666"
+	text[NORMAL] = "#ffffffffffff"
+	base[SELECTED] = "#777711111111"
+
+    engine "clearlookspix" {}
+}
+widget "*.geany-search-entry-no-match-pix" style "geany-search-entry-no-match-style-pix"

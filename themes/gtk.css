@@ -1,0 +1,20 @@
+/* USE NON-SYMBOLIC ICONS ON XFCE PANEL */
+.xfce4-panel image { -gtk-icon-style: regular; }
+
+
+/* DESKTOP ICON LABEL TEXT/BACKGROUND COLOR CHANGE */
+
+/* default label state */
+XfdesktopIconView.view .label {
+	background: #ededed;
+	color: black;
+	text-shadow: none;
+	/*text-shadow: 1px 1px 2px black;*/
+}
+
+/* active (selected) label state */
+XfdesktopIconView.view .label:active {
+	background: #87919b;
+	color: white;
+	/*text-shadow: 1px 3px 3px blue;*/
+}

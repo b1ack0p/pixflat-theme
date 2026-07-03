@@ -1,0 +1,6 @@
+[X-GNOME-Metatheme]
+Name=PiXnoir
+Type=X-GNOME-Metatheme
+Comment=Dark version of PiXflat theme for Raspberry Pi, originally based on parts of Adwaita and Clearlooks
+Encoding=UTF-8
+GtkTheme=PiXnoir

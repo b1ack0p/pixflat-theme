@@ -1,0 +1,63 @@
+# active window title bar
+window.active.title.bg: flat
+window.active.title.bg.color: #4d98f5
+window.active.label.bg: parentrelative
+window.active.label.text.color: #ffffff
+window.active.label.text.font: shadow=n
+window.active.button.unpressed.image.color: #F4F5F6
+window.active.button.pressed.image.color: #F4F5F6
+window.active.button.hover.image.color: #F4F5F6
+window.active.button.toggled.unpressed.image.color: #F4F5F6
+window.active.button.toggled.pressed.image.color: #F4F5F6
+window.active.button.toggled.hover.image.color: #F4F5F6
+window.active.button.disabled.image.color: #6D6C6C
+window.active.border.color: #D0D0D0
+window.active.client.color: #EEEFEE
+
+# inactive window title bar
+window.inactive.title.bg: flat
+window.inactive.title.bg.color: #EEEFEE
+window.inactive.label.bg: parentrelative
+window.inactive.label.text.color: #70747D
+window.inactive.label.text.font: shadow=n
+window.inactive.button.unpressed.image.color: #6D6C6C
+window.inactive.button.pressed.image.color: #6D6C6C
+window.inactive.button.hover.image.color: #6D6C6C
+window.inactive.button.toggled.unpressed.image.color: #6D6C6C
+window.inactive.button.toggled.pressed.image.color: #6D6C6C
+window.inactive.button.toggled.hover.image.color: #6D6C6C
+window.inactive.button.disabled.image.color: #B0B0B0
+window.inactive.border.color: #D0D0D0
+window.inactive.client.color: #EEEFEE
+
+# maximise, minimise etc. buttons
+*.button.disabled.bg: parentrelative
+*.button.pressed.bg: parentrelative
+*.button.unpressed.bg: parentrelative
+*.button.hover.bg: parentrelative
+*.button.toggled.pressed.bg: parentrelative
+*.button.toggled.unpressed.bg: parentrelative
+*.button.toggled.hover.bg: parentrelative
+
+# borders
+border.width: 1
+border.radius: 2
+window.handle.width: 0
+window.client.padding.width: 0
+
+# window title
+window.label.text.justify: center
+
+# menus
+menu.border.color: #AAAAAA
+menu.separator.color: #AAAAAA
+menu.title.bg: solid flat
+menu.title.bg.color: #E6E7E6
+menu.title.text.color: #111111
+menu.items.bg: solid flat
+menu.items.bg.color: #FFFFFF
+menu.items.text.color: #111111
+menu.items.active.bg: flat border
+menu.items.active.bg.color: #8CB0DC
+menu.items.active.text.color: #FFFFFF
+menu.items.disabled.text.color: #AAAAAA
