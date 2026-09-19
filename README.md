@@ -35,11 +35,11 @@ No options are needed. Both scripts detect everything themselves:
 
 | Detected | How |
 |----------|-----|
-| Debian release | `/etc/os-release`: Debian 12 uses the Raspberry Pi OS bookworm packages, Debian 13 and testing use trixie; derivatives are matched by library generation |
+| Debian release | `/etc/os-release`: Debian 11 uses the Raspberry Pi OS bullseye packages, Debian 12 bookworm, Debian 13 and newer trixie; derivatives are matched by library generation |
 | Architecture | amd64, arm64, armhf or i386, from `dpkg` |
 | User | you, or the user who invoked `sudo` |
 | Desktop | the session you are logged into; if none is running, every desktop installed |
-| Themes | every theme compatible with the release is installed; the look is chosen at the end (the default is the matching Raspberry Pi OS release: PiXtrix on Debian 13, PiXflat on Debian 12) |
+| Themes | every theme is installed, on every release; the look is chosen at the end (the default is the matching Raspberry Pi OS release: PiXtrix on Debian 13, PiXflat on Debian 12) |
 
 Run them as your normal user. They ask for `sudo` only to install packages, then
 apply the settings to your own desktop.
@@ -48,11 +48,11 @@ apply the settings to your own desktop.
 
 | Theme (`-t`) | Look | Font | Wallpaper | Needs |
 |--------------|------|------|-----------|-------|
-| `pixflat` | light, Raspberry Pi OS Bookworm (default on Debian 12) | Piboto (PibotoLt 12) | fisherman | Debian 12+ |
-| `pixnoir` | dark, Raspberry Pi OS Bookworm | Piboto | fisherman | Debian 12+ |
-| `pixtrix` | light, Raspberry Pi OS Trixie (default on Debian 13) | Nunito Sans Light 12 | sunrise | Debian 13+ |
-| `pixonyx` | dark, Raspberry Pi OS Trixie | Nunito Sans Light 12 | sunrise | Debian 13+ |
-| `pix` | legacy, Raspberry Pi OS Buster/Bullseye | Piboto | fisherman | Debian 12+ |
+| `pixflat` | light, Raspberry Pi OS Bookworm (default on Debian 12) | Piboto (PibotoLt 12) | fisherman | Debian 11+ |
+| `pixnoir` | dark, Raspberry Pi OS Bookworm | Piboto | fisherman | Debian 11+ |
+| `pixtrix` | light, Raspberry Pi OS Trixie (default on Debian 13) | Nunito Sans Light 12 | sunrise | Debian 11+ |
+| `pixonyx` | dark, Raspberry Pi OS Trixie | Nunito Sans Light 12 | sunrise | Debian 11+ |
+| `pix` | legacy, Raspberry Pi OS Buster/Bullseye | Piboto | fisherman | Debian 11+ |
 
 All themes compatible with your Debian release are installed (about 76 MB on
 Debian 13, most of it wallpapers). At the end, the installer asks which look to
@@ -113,12 +113,12 @@ file manager and system tools are never installed.
 | Rendering and sizes | antialiasing, full hinting, RGB subpixel order; cursor 24 px; toolbar icons 24 px with text beside; no icons in menus and buttons |
 | Windows (Openbox, labwc) | theme, title bar with title, minimise, maximise and close (no window menu), round corners and invisible resize handles (Openbox), one desktop, window placement; labwc also drop shadows, window snapping and the window switcher layout |
 | Scaling | Raspberry Pi OS sets no DPI or scale factor, so neither does the installer: your display scaling is kept |
-| Panel (LXDE, Debian 13) | **Raspberry Pi's own panel** (`lxpanel-pi`) with its plugins: menu (Debian logo), launchers for web browser, file manager and terminal, taskbar, tray, eject, Bluetooth, volume, clock, battery (laptops) and magnifier, in the Raspberry Pi OS order and geometry (top, 36 px, 36 px icons, theme colours); Raspberry Pi's Shutdown dialog (`pishutdown`: log out, reboot, shut down) at the end of the menu and its Run dialog (`gui-runcmd`) in Accessories; the Raspberry Pi OS keys: Super or Ctrl+Esc for the menu, Alt+F2 to run, Ctrl+Alt+Del for Shutdown, Ctrl+Alt+B for Bluetooth, Ctrl+Alt+M for the magnifier, the volume keys. The menu is reloaded whenever packages add or remove applications (Raspberry Pi's panel reads it only when it starts). The legacy PiX icons lack this panel's icons, so they are not offered with it |
-| Panel (LXDE, Debian 12) | Debian's panel with the same layout and geometry: menu (Debian logo), launchers, taskbar, tray, volume, clock (`HH:MM`), battery (laptops) |
-| Notification icons | the Raspberry Pi OS icons for sound, network and Bluetooth: Debian's volume plugin, `nm-applet` and `blueman` show the same images as the Raspberry Pi panel plugins (Wi-Fi strength, wired, offline, connecting, VPN, Bluetooth on/off); secured connections show the plain signal icon, as in Raspberry Pi OS |
-| Tray applets (LXDE) | `nm-applet` for the network icon is installed if NetworkManager is; `blueman` for Bluetooth if BlueZ is, on Debian 12 (the Raspberry Pi panel on Debian 13 has its own Bluetooth plugin). Tray applets Raspberry Pi OS does not show (clipboard managers such as Diodon, other volume applets, `blueman` with the Raspberry Pi panel) are hidden once for your user, not removed; enable one again in *Desktop Session Settings* and it stays |
+| Panel (LXDE, Debian 13) | **Raspberry Pi's own panel** (`lxpanel-pi`) with its plugins: menu (Debian logo), launchers for web browser, file manager and terminal, taskbar, tray, eject, Bluetooth, volume, clock, battery (laptops) and magnifier, in the Raspberry Pi OS order and geometry (top, 36 px, 36 px icons, theme colours); Raspberry Pi's Run and Shutdown dialogs (`gui-runcmd`, `pishutdown`: log out, reboot, shut down) at the end of the menu; the network icon (`nm-applet`) in the network plugin's place, between Bluetooth and volume; only the updater and power plugins are left out (they need Raspberry Pi system tools or hardware), and the network plugin (it needs a Raspberry Pi rebuild of a Debian library); the Raspberry Pi OS keys: Super or Ctrl+Esc for the menu, Alt+F2 to run, Ctrl+Alt+Del for Shutdown, Ctrl+Alt+B for Bluetooth, Ctrl+Alt+M for the magnifier, the volume keys. The menu is reloaded whenever packages add or remove applications (Raspberry Pi's panel reads it only when it starts). |
+| Panel (LXDE, Debian 11 and 12) | Debian's panel with the same layout and geometry: menu (Debian logo), launchers, taskbar, tray, volume, clock (`HH:MM`), battery (laptops) |
+| Notification icons | the Raspberry Pi OS icons for sound, network and Bluetooth (the legacy PiX icons take the ones they lack from PiXflat): Debian's volume plugin, `nm-applet` and `blueman` show the same images as the Raspberry Pi panel plugins (Wi-Fi strength, wired, offline, connecting, VPN, Bluetooth on/off); secured connections show the plain signal icon, as in Raspberry Pi OS. On the Raspberry Pi panel, tray icons get an opaque background in the panel colour, because that panel's tray does not clear an icon before redrawing it (without it, `nm-applet` showed a doubled icon) |
+| Tray applets (LXDE) | `nm-applet` for the network icon is installed if NetworkManager is; `blueman` for Bluetooth if BlueZ is, on Debian 11 and 12 (the Raspberry Pi panel on Debian 13 has its own Bluetooth plugin). Tray applets Raspberry Pi OS does not show (clipboard managers such as Diodon, other volume applets, `blueman` with the Raspberry Pi panel) are hidden once for your user, not removed; enable one again in *Desktop Session Settings* and it stays |
 | Login screen | when Debian's LightDM GTK greeter is installed (`--no-lightdm` to skip): the Raspberry Pi OS login screen with Debian's greeter: its wallpaper (the dark one with PiXnoir and PiXonyx), centred login box, user list, theme, icons, cursor and font, and the Debian logo as the default user picture |
-| Application menu (LXDE) | Raspberry Pi OS categories and order: Programming, Education, Science, Office, Internet, Sound & Video, Graphics, Games, Other, System Tools, Accessories, then Help and Preferences, and the Shutdown entry last; empty categories are hidden until an application of that category is installed. The menu is kept up to date by later runs unless you edit it with a menu editor |
+| Application menu (LXDE) | Raspberry Pi OS categories and order: Programming, Education, Science, Office, Internet, Sound & Video, Graphics, Games, Other, System Tools, Accessories, then Help, Preferences, Run and Shutdown; empty categories are hidden until an application of that category is installed. The menu is kept up to date by later runs unless you edit it with a menu editor |
 | File manager (PCManFM) | 943×653 window, folder tree side pane, icon view with thumbnails, new tab/navigation/home toolbar, status bar; icons 48 px, small and side pane icons 24 px, thumbnails 80 px; places: home, root and drives |
 | Desktop | wallpaper, desktop colours and font, trash and drive icons, no documents icon |
 | Sounds | event and input feedback sounds with the freedesktop sound theme |
@@ -151,7 +151,7 @@ panel's battery plugin draws its own.
 | Toolkit | Support |
 |---------|---------|
 | GTK 2 | Official theme with its engines: `pixflat` or `clearlookspix` from Raspberry Pi OS, `pixmap` from Debian's `gtk2-engines-pixbuf`. The installer reads each theme's `gtkrc` and installs every engine it uses. |
-| GTK 3 | Official, complete theme (`gtk-3.0`) in every variant: the toolkit Raspberry Pi OS itself uses. |
+| GTK 3 | Official, complete theme (`gtk-3.0`) in every variant: the toolkit Raspberry Pi OS itself uses. The legacy PiX theme has no panel styling of its own; with the Raspberry Pi panel it gets PiXflat's, in PiX colours. |
 | GTK 4 / libadwaita | No official GTK 4 theme exists, and libadwaita ignores themes. Instead, the theme's own GTK 3 palette is mapped onto the named colours that GTK 4 and libadwaita read from `~/.config/gtk-4.0/gtk.css`, so window, view, header bar, sidebar, popover and accent colours match. Widget shapes stay GTK 4's own. Skip with `--no-gtk4`. |
 
 LXDE itself is GTK 2 on Debian 12 and GTK 3 on Debian 13 (lxpanel, pcmanfm,
@@ -200,12 +200,13 @@ Examples:
 
 ## How it works
 
-1. **Picks the newest compatible packages:** Debian 12 uses the Raspberry Pi OS
-   `bookworm` release, Debian 13 (and testing) `trixie`. Derivatives are matched
+1. **Picks the newest compatible packages:** Debian 11 uses the Raspberry Pi OS
+   `bullseye` release, Debian 12 `bookworm`, Debian 13 and newer `trixie`. Derivatives are matched
    by ABI generation, and `--suite` overrides it. Packages with binaries (themes,
    GTK 2 engines) always come from the matching release, so they are built against
    your system's libraries. Architecture-independent packages (icons, fonts,
-   wallpapers) may come from a newer release. Either way, a version is only used
+   wallpapers) and the theme packages, which hold no compiled code, may come
+   from any release, so every theme works on every Debian release. Either way, a version is only used
    if all its dependencies, including their versions, are available from Debian.
 2. **Verifies everything:** the archive's `InRelease` index must be signed by the
    Raspberry Pi Archive Signing Key (fingerprint
@@ -308,7 +309,7 @@ packages/
 │   ├── icons/        pixflat-icons, pixtrix-icons, rpd-icons, gnome-icon-theme, adwaita-icon-theme-legacy
 │   ├── fonts/        fonts-piboto, fonts-nunito-sans, fonts-liberation
 │   ├── sounds/       sound-theme-freedesktop
-│   ├── panel/        lxpanel-pi, plugins, pishutdown, gui-runcmd (Debian 13), nm-applet, blueman (Debian 12)
+│   ├── panel/        lxpanel-pi, plugins, pishutdown, gui-runcmd (Debian 13), nm-applet, blueman (Debian 11, 12)
 │   ├── dependencies/ libraries the panel and applets need that a standard LXDE desktop lacks
 │   ├── engines/      GTK 2 engines and runtime: gtk2-engines-*, libgtk2.0-*, libgdk-pixbuf*
 │   └── wallpapers/   rpd-wallpaper, rpd-wallpaper-trixie, their 4K sets, and rpd-common
@@ -318,7 +319,8 @@ packages/
 └── VERSIONS.md       exact version and source of every package
 ```
 
-It covers **bookworm** and **trixie** on **amd64, arm64, armhf and i386**: all
+It covers **bullseye**, **bookworm** and **trixie** (Debian 11, 12, 13; newer
+Debian releases use trixie) on **amd64, arm64, armhf and i386**: all
 Raspberry Pi OS theme packages, plus every official Debian package they need
 that is not part of a standard Debian desktop. The builder works out that list
 from Debian's signed index. It takes the full dependency closure of the bundled
@@ -347,7 +349,7 @@ limit.
 
 ## Requirements
 
-Debian 12 or 13, or a derivative, on amd64, arm64, armhf or i386; bash 4.4+;
+Debian 11 or newer, or a derivative, on amd64 or i386 (x86) or arm64 or armhf (ARM); bash 4.4+;
 `sudo`; and `curl` or `wget` for the online installer. Everything else (`gpgv`,
 `dpkg-deb`, `apt`) is part of every Debian installation.
 

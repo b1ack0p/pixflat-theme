@@ -42,15 +42,20 @@ readonly ART_PKG="rpd-common"
 readonly ART_SUITE="trixie"
 readonly DEBIAN_ARCHIVE="https://deb.debian.org/debian"
 readonly DEBIAN_KEYRING="/usr/share/keyrings/debian-archive-keyring.gpg"
-readonly OFFLINE_SUITES=(bookworm trixie)
+readonly OFFLINE_SUITES=(bullseye bookworm trixie)
+# Raspberry Pi OS theme packages built per architecture but holding no compiled
+# code: any Raspberry Pi OS release's build for this architecture can be used.
+readonly DATA_PKGS=(pixflat-theme pixtrix-theme pix-theme)
 readonly OFFLINE_ARCHES=(amd64 arm64 armhf i386)
 readonly DE_SUPPORTED=(lxde lxqt xfce gnome budgie cinnamon mate openbox labwc kde)
 readonly SESSION_PROCS=(lxsession xfce4-session lxqt-session gnome-shell budgie-panel
 	cinnamon mate-session plasmashell labwc openbox xfwm4)
 
-# Dependency names that no longer exist on newer Debian releases, mapped to
-# their successors (first available candidate wins).
+# Dependency names missing on some Debian releases, mapped to the package that
+# provides them there (first available candidate wins): successors on newer
+# releases, and on older ones the package the icons were split from.
 declare -rA DEP_RENAMES=(
+	[adwaita-icon-theme-legacy]="adwaita-icon-theme"
 	[libgdk-pixbuf2.0-0]="libgdk-pixbuf-2.0-0"
 	[libglib2.0-0]="libglib2.0-0t64"
 	[libgtk2.0-0]="libgtk2.0-0t64"
@@ -240,7 +245,7 @@ Themes:
   pixflat   Light, Raspberry Pi OS Bookworm (PiXflat + Piboto)     default on Debian 12
   pixnoir   Dark,  Raspberry Pi OS Bookworm (PiXnoir + Piboto)
   pixtrix   Light, Raspberry Pi OS Trixie   (PiXtrix + Nunito Sans) default on Debian 13+
-  pixonyx   Dark,  Raspberry Pi OS Trixie   (PiXonyx + Nunito Sans) Debian 13+
+  pixonyx   Dark,  Raspberry Pi OS Trixie   (PiXonyx + Nunito Sans)
   pix       Legacy Raspberry Pi OS Buster/Bullseye look (PiX)
 
 Options:
@@ -392,14 +397,13 @@ _family_pkgs() {
 	esac
 }
 
-# Raspberry Pi OS packages the offline repository carries for a release.
+# Raspberry Pi OS packages the offline repository carries for a release: every
+# theme, and Raspberry Pi's panel (built for Debian 13) on Debian 13.
 _bundle_rpi_pkgs() {
 	printf '%s\n' pixflat-theme pixflat-icons gtk2-engines-pixflat fonts-piboto rpd-wallpaper \
-		rpd-wallpaper-4k pix-theme rpd-icons gtk2-engines-clearlookspix
-	if [[ $1 == trixie ]]; then
-		printf '%s\n' pixtrix-theme pixtrix-icons fonts-nunito-sans rpd-wallpaper-trixie rpd-wallpaper-trixie-4k
-		_pi_panel_pkgs
-	fi
+		rpd-wallpaper-4k pix-theme rpd-icons gtk2-engines-clearlookspix \
+		pixtrix-theme pixtrix-icons fonts-nunito-sans rpd-wallpaper-trixie rpd-wallpaper-trixie-4k
+	if (( $(_suite_rank "$1") >= 3 )); then _pi_panel_pkgs; fi
 }
 # Raspberry Pi's own panel (Debian 13 and later) with the plugins that work on
 # Debian, its Shutdown dialog (log out, reboot, shut down; at the end of the
@@ -417,13 +421,13 @@ _bundle_deb_pkgs() {
 		"$(_nm_applet_pkg "$1")"
 	# blueman only where Debian's panel is used; Raspberry Pi's panel (Debian 13)
 	# has its own Bluetooth plugin
-	if [[ $1 == trixie ]]; then printf '%s\n' adwaita-icon-theme-legacy; else printf '%s\n' blueman; fi
+	if (( $(_suite_rank "$1") >= 3 )); then printf '%s\n' adwaita-icon-theme-legacy; else printf '%s\n' blueman; fi
 }
 # Debian package providing nm-applet (network-manager-gnome is transitional
 # from Debian 13).
-_nm_applet_pkg() { if [[ $1 == bookworm ]]; then echo network-manager-gnome; else echo network-manager-applet; fi; }
+_nm_applet_pkg() { if (( $(_suite_rank "$1") < 3 )); then echo network-manager-gnome; else echo network-manager-applet; fi; }
 # Debian package providing Liberation Mono, the Raspberry Pi OS monospace font.
-_mono_font_pkg() { if [[ $1 == bookworm ]]; then echo fonts-liberation2; else echo fonts-liberation; fi; }
+_mono_font_pkg() { if (( $(_suite_rank "$1") < 3 )); then echo fonts-liberation2; else echo fonts-liberation; fi; }
 
 # ---------------------------------------------------------------------------
 # Host, user and desktop detection
@@ -799,7 +803,8 @@ _deps_satisfiable() {
 # rebuild of a Debian package is skipped for an older version that does not.
 #  * From the target release: any architecture (binaries match this system).
 #  * From newer Raspberry Pi OS releases: architecture-independent packages
-#    (icons, fonts, wallpapers) only.
+#    (icons, fonts, wallpapers), and the theme packages without compiled code
+#    (DATA_PKGS) built for this architecture.
 #  * Only if neither has it: older releases, then the armhf index, which lists
 #    every Pi package.
 # Offline, the local repository is the only source and is used as built.
@@ -824,7 +829,8 @@ resolve_pkg() {
 		index_load "$aid" "${x%/*}" "${x#*/}" || continue
 		while IFS= read -r line; do
 			IFS=$'\t' read -r v a f sha z d <<<"$line"
-			[[ $x == "$H_SUITE/$H_ARCH" || $a == all ]] || break
+			[[ $x == "$H_SUITE/$H_ARCH" || $a == all ]] \
+				|| { [[ $a == "$H_ARCH" && " ${DATA_PKGS[*]} " == *" $pkg "* ]]; } || break
 			if [[ $aid != local ]] && ! _deps_satisfiable "$d"; then
 				[[ -n $skipped ]] || skipped=$v
 				continue
@@ -1272,6 +1278,9 @@ gen_icon_overlay() {
 	mapfile -t dirs < <(cd "$out" && find . -mindepth 2 -maxdepth 2 -type d ! -path './cursors*' -printf '%P\n' | sort)
 	debug "$base: icon aliases in ${#dirs[@]} directories"
 	inh=$(sed -n 's/^Inherits[[:space:]]*=[[:space:]]*//p' "$bdir/index.theme" | head -n1)
+	# The legacy PiX set lacks many current icons (network, Bluetooth, battery,
+	# the panel's sizes): take them from PiXflat, not from GNOME
+	if [[ $base == PiX && -f $SYS_ROOT/usr/share/icons/PiXflat/index.theme ]]; then inh=PiXflat,$inh; fi
 	inh=$(tr ',' '\n' <<<"$base,$inh,Adwaita,hicolor" | awk 'NF && !seen[$0]++' | paste -sd, -)
 	{
 		printf '[Icon Theme]\nName=%s (Debian)\n' "$base"
@@ -1500,7 +1509,7 @@ resolve_all() {
 		mapfile -t -O "${#wanted[@]}" wanted < <(_pi_panel_pkgs)
 	fi
 	if [[ -n $O_ONLY && " ${wanted[*]} " != *" $(_theme_pkg "$O_ONLY") "* ]]; then
-		die "$O_ONLY is not available for Debian $H_SUITE (PiXtrix and PiXonyx need Debian 13)"
+		die "$O_ONLY is not available for Debian $H_SUITE/$H_ARCH"
 	fi
 
 	if [[ -n $O_REPO ]]; then
@@ -1923,7 +1932,7 @@ build_offline_repo() {
 			# runtime, the LXDE desktop and its audio server, and NetworkManager
 			# and BlueZ (the tray applets are only installed where these are).
 			gtk3=libgtk-3-0t64 audio=pipewire-pulse
-			[[ $suite == bookworm ]] && gtk3=libgtk-3-0 audio=pulseaudio
+			(( $(_suite_rank "$suite") < 3 )) && gtk3=libgtk-3-0 audio=pulseaudio
 			base=$deb.base
 			BASE=priority _closure "$deb" "$gtk3" librsvg2-common hicolor-icon-theme \
 				lxde-core "$audio" network-manager bluez >"$base"
@@ -2193,6 +2202,8 @@ _launcher() {
 # Print the parts of the Raspberry Pi OS panel (raspberrypi-ui-mods /
 # rpd-x-core) that both panel programs share. Usage: _panel_global [KEY=VALUE]...
 _panel_global() {
+	printf '# lxpanel <profile> config file. Manually editing is not recommended.\n'
+	printf '# Use preference dialog in lxpanel to adjust config when you can.\n\n'
 	printf 'Global {\n'
 	printf '  %s\n' edge=top align=left margin=0 widthtype=percent width=100 height=36 transparent=0 \
 		tintcolor=#000000 alpha=0 autohide=0 heightwhenhidden=2 setdocktype=1 setpartialstrut=1 \
@@ -2234,8 +2245,6 @@ _lxpanel_write() {
 	if (( O_DRY_RUN )); then log "   [dry-run] $file: Raspberry Pi OS panel layout"; return 0; fi
 	_track_file "$file"
 	{
-		printf '# lxpanel <profile> config file. Manually editing is not recommended.\n'
-		printf '# Use preference dialog in lxpanel to adjust config when you can.\n\n'
 		_panel_global point_at_menu=0
 		_panel_plugin menu "image=${A_LOGO:-start-here}" "system {" "}" "separator {" "}" \
 			"item {" "  image=system-run" "  command=run" "}" "separator {" "}" \
@@ -2251,20 +2260,20 @@ _lxpanel_write() {
 }
 
 # Write the Raspberry Pi OS 13 panel (rpd-x-core) for Raspberry Pi's own panel
-# program, without the plugins that do not work on Debian (updater, power,
-# network; nm-applet shows the network icons in the tray).
+# program, without the plugins that do not work on Debian (power, updater,
+# network). The tray takes the network plugin's place, between Bluetooth and
+# volume, as nm-applet shows the network icon there.
 _pi_panel_write() {
 	local file=$1 p
 	if (( O_DRY_RUN )); then log "   [dry-run] $file: Raspberry Pi OS panel (lxpanel-pi)"; return 0; fi
 	_track_file "$file"
 	{
-		_panel_global
+		_panel_global point_at_menu=0
 		_panel_plugin smenu
 		_panel_plugin separator
 		_panel_tasks
-		_panel_plugin tray
 		_panel_plugin ejecter
-		for p in bluetooth volumepulse clock batt magnifier; do _panel_plugin space Size=2; _panel_plugin "$p"; done
+		for p in bluetooth tray volumepulse clock batt magnifier; do _panel_plugin space Size=2; _panel_plugin "$p"; done
 	} | _write "$file"
 }
 
@@ -2325,6 +2334,32 @@ _pi_panel_keys() {
 	done
 }
 
+# CSS for Raspberry Pi's panel. Its tray does not clear an icon before it is
+# redrawn at a new size, so nm-applet's icon would show its previous image
+# through: an opaque background in the panel colour hides it. The legacy PiX
+# theme has no panel colour or styling: it gets PiXflat's, in PiX colours.
+_pi_panel_css() {
+	local bar=bar_bg_color css
+	_theme_color bar_bg_color >/dev/null || bar=theme_bg_color
+	css="/* Tray icons on the Raspberry Pi panel: opaque, in the panel colour */
+window > image { background-color: @$bar; }"
+	if [[ $T_GTK == PiX ]]; then
+		css+='
+/* The Raspberry Pi panel style of PiXflat, for the legacy PiX theme */
+#PanelToplevel { color: @theme_fg_color; background-color: @theme_bg_color; }
+#PanelToplevel button { padding: 2px 3px; background-image: none; border: 0px; }
+#PanelToplevel button, #PanelToplevel:backdrop button > box > label {
+  color: @theme_fg_color; background-color: @theme_bg_color; -gtk-icon-shadow: none; -gtk-icon-effect: none; }
+#PanelToplevel button:hover, #PanelToplevel button:checked:hover,
+#PanelToplevel:backdrop button:hover > box > label, #PanelToplevel:backdrop button:checked:hover > box > label {
+  background-color: shade(@theme_bg_color, 0.877); }
+#PanelToplevel button:checked, #PanelToplevel:backdrop button:checked > box > label {
+  background-color: shade(@theme_bg_color, 0.843); }
+#launchbar button { padding: 0px 0px; }'
+	fi
+	_block_set "$HOME/.config/gtk-3.0/gtk.css" "$APP_NAME-panel" "$css"
+}
+
 # Start the given panel program in the LXDE session instead of the current one.
 # Usage: _lxsession_panel SESSION PROGRAM
 _lxsession_panel() {
@@ -2339,8 +2374,8 @@ _lxsession_panel() {
 }
 
 # Write the Raspberry Pi OS application menu for LXDE: its category order,
-# names and icons, with separators before Help and Preferences, and entries of
-# the "Applications" category (the Shutdown dialog) at the end. Category
+# names and icons, with separators before Help and Preferences, and the Run
+# and Shutdown dialogs at the end. Category
 # names that match Debian's (lxmenu-data) keep Debian's translations.
 _lxde_menu_write() {
 	local ddir=$HOME/.local/share/desktop-directories menu=$HOME/.config/menus/lxde-applications.menu
@@ -2370,18 +2405,22 @@ _lxde_menu_write() {
 		for entry in "${cats[@]}"; do
 			IFS='|' read -r id name icon cat deb <<<"$entry"
 			printf '  <Menu>\n    <Name>%s</Name>\n    <Directory>%s-%s.directory</Directory>\n' "$id" "$APP_NAME" "$id"
-			if [[ -n $cat ]]; then
+			if [[ $id == utility ]]; then   # Run is at the end of the menu instead
+				printf '    <Include>\n      <Category>%s</Category>\n    </Include>\n' "$cat"
+				printf '    <Exclude>\n      <Filename>gui-runcmd.desktop</Filename>\n    </Exclude>\n  </Menu>\n'
+			elif [[ -n $cat ]]; then
 				printf '    <Include>\n      <Category>%s</Category>\n    </Include>\n  </Menu>\n' "$cat"
 			else
 				printf '    <OnlyUnallocated/>\n    <Include>\n      <All/>\n    </Include>\n  </Menu>\n'
 			fi
 		done
-		printf '  <Include>\n    <Category>Applications</Category>\n  </Include>\n  <Layout>\n'
+		printf '  <Include>\n    <Category>Applications</Category>\n    <Filename>gui-runcmd.desktop</Filename>\n  </Include>\n  <Layout>\n'
 		for id in development education science office network audio-video graphics game other system-tools utility; do
 			printf '    <Menuname>%s</Menuname>\n' "$id"
 		done
 		printf '    <Merge type="menus"/>\n    <Separator/>\n    <Menuname>help</Menuname>\n    <Separator/>\n'
-		printf '    <Menuname>settings</Menuname>\n    <Separator/>\n    <Merge type="files"/>\n  </Layout>\n</Menu>\n'
+		printf '    <Menuname>settings</Menuname>\n    <Separator/>\n    <Filename>gui-runcmd.desktop</Filename>\n'
+		printf '    <Filename>pishutdown.desktop</Filename>\n    <Merge type="files"/>\n  </Layout>\n</Menu>\n'
 	} | _write "$menu"
 	for entry in "${cats[@]}"; do
 		IFS='|' read -r id name icon cat deb <<<"$entry"
@@ -2661,6 +2700,7 @@ apply_de_lxde() {
 		_lxde_menu_write   # still the installer's menu (not edited by a menu editor): keep it current
 	fi
 	if (( O_PANEL && O_PI_PANEL )) && [[ -f $rc ]]; then _pi_panel_keys "$rc"; fi
+	if (( O_PANEL && O_PI_PANEL )); then _pi_panel_css; fi
 	if (( O_PANEL )); then _hide_extra_applets; fi
 	if [[ -n ${DISPLAY:-} ]]; then
 		if _running openbox; then run openbox --reconfigure || true; fi
@@ -3134,8 +3174,6 @@ choose_look() {
 	done
 	(( ${#ids[@]} )) || die "no Raspberry Pi OS theme is installed; run $(_self_cmd) without --apply-only"
 	for id in pixflat pixtrix pix; do
-		# The legacy PiX icons lack the icons and sizes of Raspberry Pi's panel
-		(( O_PI_PANEL )) && [[ $id == pix ]] && continue
 		if _have_pkg "$(_icons_pkg "$id")"; then icons+=("$id"); fi
 	done
 
@@ -3172,9 +3210,6 @@ choose_look() {
 		done
 		_menu "Icons" "$def" 0 "${items[@]}"
 		O_ICONS=${icons[REPLY]}
-	fi
-	if [[ $O_THEME == pix && -z $O_ICONS ]] && (( O_PI_PANEL && ${#icons[@]} )); then
-		O_ICONS=${icons[0]}   # the PiX theme with icons that fit Raspberry Pi's panel
 	fi
 	set_theme "$O_THEME"
 }

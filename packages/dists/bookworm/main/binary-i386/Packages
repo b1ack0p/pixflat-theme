@@ -1,17 +1,18 @@
 Package: pixflat-theme
-Version: 0.24
+Version: 0.24+b1
 Architecture: i386
 Depends: gtk2-engines-pixbuf, gtk2-engines-pixflat
 Breaks: raspberrypi-ui-mods (<< 1.20231122)
 Replaces: raspberrypi-ui-mods (<< 1.20231122)
-Installed-Size: 453
+Installed-Size: 454
 Maintainer: Simon Long <simon@raspberrypi.com>
 Section: x11
 Priority: optional
 Multi-Arch: no
-Filename: pool/themes/pixflat-theme_0.24_i386.deb
-Size: 92284
-SHA256: 6cd5f83452746c50e387ebad722eb8e051a38c2f449fb70252418d1571a7065d
+Source: pixflat-theme (0.24)
+Filename: pool/themes/pixflat-theme_0.24+b1_i386.deb
+Size: 92516
+SHA256: 42d2259c7e69097cea1bfe2ada05d314bc8531e12f7c78a560f701dca7188422
 Description: PiXflat theme for Raspberry Pi desktop
 
 Package: pixflat-icons
@@ -130,6 +131,74 @@ Filename: pool/engines/gtk2-engines-clearlookspix_2.20.8_i386.deb
 Size: 87080
 SHA256: 70844a2ed8f799f69c7c390c2846e57c86a00e9dc2a0ee6cf957cf606f4703c2
 Description: clearlookspix theme for GTK+ 2.x
+
+Package: pixtrix-theme
+Version: 0.6
+Architecture: i386
+Depends: gtk2-engines-pixbuf, gtk2-engines-pixflat
+Installed-Size: 455
+Maintainer: Simon Long <simon@raspberrypi.com>
+Section: x11
+Priority: optional
+Multi-Arch: no
+Filename: pool/themes/pixtrix-theme_0.6_i386.deb
+Size: 91668
+SHA256: 01dc3b17f8ad764c434c1f7aceb991e8ac8542815e459dac2f0e9fa56a366561
+Description: PiXtrix theme for Raspberry Pi Desktop
+
+Package: pixtrix-icons
+Version: 0.6
+Architecture: all
+Depends: gtk-update-icon-cache, adwaita-icon-theme
+Installed-Size: 5628
+Maintainer: Simon Long <simon@raspberrypi.com>
+Section: x11
+Priority: optional
+Multi-Arch: no
+Filename: pool/icons/pixtrix-icons_0.6_all+debcompat.deb
+Size: 1401992
+SHA256: 51320508895c3b8d93570d29e4ab165907ce3d3c28c36c263adf3a0305e686dc
+Description: Icons for Raspberry Pi Desktop
+
+Package: fonts-nunito-sans
+Version: 1.0
+Architecture: all
+Pre-Depends: dpkg (>= 1.15.6~)
+Installed-Size: 1115
+Maintainer: Simon Long <simon@raspberrypi.com>
+Section: fonts
+Priority: optional
+Multi-Arch: foreign
+Filename: pool/fonts/fonts-nunito-sans_1.0_all.deb
+Size: 545278
+SHA256: 3bf5a80dd44e1392613406c67514043ae4332714d0043bec91452b5756389945
+Description: Nunito Sans Google font
+
+Package: rpd-wallpaper-trixie
+Version: 0.1
+Architecture: all
+Installed-Size: 45757
+Maintainer: Simon Long <simon@raspberrypi.com>
+Section: x11
+Priority: optional
+Multi-Arch: no
+Filename: pool/wallpapers/rpd-wallpaper-trixie_0.1_all.deb
+Size: 46370018
+SHA256: 3d5060b43b8c63c079dc96fd47ea7d04c942bad0474dd45cce86103eed42a028
+Description: Wallpaper for Raspberry Pi Desktop
+
+Package: rpd-wallpaper-trixie-4k
+Version: 0.1
+Architecture: all
+Installed-Size: 102609
+Maintainer: Simon Long <simon@raspberrypi.com>
+Section: x11
+Priority: optional
+Multi-Arch: no
+Filename: pool/wallpapers/rpd-wallpaper-trixie-4k_0.1_all.deb
+Size: 104446072
+SHA256: 04b609cbbf78445dfa7edd35891e7497bcacd0c5e094b6f4b81965148ee3333a
+Description: 4K Wallpaper for Raspberry Pi Desktop
 
 Package: blueman
 Version: 2.3.5-2+b1
