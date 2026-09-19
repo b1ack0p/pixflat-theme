@@ -68,10 +68,11 @@ Change the look at any time without downloading anything:
 
 Your desktop's appearance settings (e.g. LXAppearance, Xfce Appearance) also list
 the installed themes, but change only the GTK theme and icons. `--apply-only`
-switches the whole look. If you pick icons there, choose **PiXflat (Debian)** or
-**PiXtrix (Debian)**: the plain PiXflat and PiXtrix entries are the unmodified
-official sets, without the Debian logo, the extra cursors and the notification
-icon names Debian's applets use.
+switches the whole look. Those tools list only the adapted icon sets
+(**PiXflat (Debian)**, **PiXtrix (Debian)**, **PiX (Debian)**): the official
+sets stay installed and working, but are hidden from the lists, where picking
+one would lose the Debian logo, the extra cursors and the notification icons
+Debian's applets use.
 
 Use `--only NAME` to install a single theme family instead, and `--4k` for the 4K
 (3840×2160) wallpaper sets.
@@ -118,9 +119,9 @@ file manager and system tools are never installed.
 | Notification icons | the Raspberry Pi OS icons for sound, network and Bluetooth (the legacy PiX icons take the ones they lack from PiXflat): Debian's volume plugin, `nm-applet` and `blueman` show the same images as the Raspberry Pi panel plugins (Wi-Fi strength, wired, offline, connecting, VPN, Bluetooth on/off); secured connections show the plain signal icon, as in Raspberry Pi OS. On the Raspberry Pi panel, tray icons get an opaque background in the panel colour, because that panel's tray does not clear an icon before redrawing it (without it, `nm-applet` showed a doubled icon) |
 | Tray applets (LXDE) | `nm-applet` for the network icon is installed if NetworkManager is; `blueman` for Bluetooth if BlueZ is, on Debian 11 and 12 (the Raspberry Pi panel on Debian 13 has its own Bluetooth plugin). Tray applets Raspberry Pi OS does not show (clipboard managers such as Diodon, other volume applets, `blueman` with the Raspberry Pi panel) are hidden once for your user, not removed; enable one again in *Desktop Session Settings* and it stays |
 | Login screen | when Debian's LightDM GTK greeter is installed (`--no-lightdm` to skip): the Raspberry Pi OS login screen with Debian's greeter: its wallpaper (the dark one with PiXnoir and PiXonyx), centred login box, user list, theme, icons, cursor and font, and the Debian logo as the default user picture |
-| Application menu (LXDE) | Raspberry Pi OS categories and order: Programming, Education, Science, Office, Internet, Sound & Video, Graphics, Games, Other, System Tools, Accessories, then Help, Preferences, Run and Shutdown; empty categories are hidden until an application of that category is installed. The menu is kept up to date by later runs unless you edit it with a menu editor |
+| Application menu (LXDE) | Raspberry Pi OS categories and order: Programming, Education, Science, Office, Internet, Sound & Video, Graphics, Games, Other, System Tools, Accessories, then Help, Preferences, Run and Shutdown; Help holds Debian Reference (`debian-reference-common`), as Raspberry Pi OS puts its documentation there; empty categories are hidden until an application of that category is installed. The menu is kept up to date by later runs unless you edit it with a menu editor |
 | File manager (PCManFM) | 943×653 window, folder tree side pane, icon view with thumbnails, new tab/navigation/home toolbar, status bar; icons 48 px, small and side pane icons 24 px, thumbnails 80 px; places: home, root and drives |
-| Desktop | wallpaper, desktop colours and font, trash and drive icons, no documents icon |
+| Desktop | wallpaper, desktop colours and font, trash and drive icons, no documents icon; the desktop is restarted so the settings (and the Desktop Preferences dialog) follow at once |
 | Sounds | event and input feedback sounds with the freedesktop sound theme |
 
 On other desktops the same GTK, font, icon and cursor settings are applied
@@ -241,6 +242,10 @@ Examples:
 6. **Applies the settings** for the detected desktop, live when possible. Every file
    and setting it changes is backed up first (`~/.local/state/pixflat-theme`).
 
+Every run is logged to `~/pixflat-theme.log` (the system, the session, the
+packages and everything the run printed), which is the first place to look when
+something is not as expected.
+
 `--uninstall` restores every backed-up setting and file, removes
 `pixflat-theme-debian` and, after asking, the packages the script installed.
 A package that other installed software has come to need is kept: APT's own
@@ -310,7 +315,7 @@ packages/
 │   ├── fonts/        fonts-piboto, fonts-nunito-sans, fonts-liberation
 │   ├── sounds/       sound-theme-freedesktop
 │   ├── panel/        lxpanel-pi, plugins, pishutdown, gui-runcmd (Debian 13), nm-applet, blueman (Debian 11, 12)
-│   ├── dependencies/ libraries the panel and applets need that a standard LXDE desktop lacks
+│   ├── dependencies/ libraries the themes and applets need that a Debian desktop lacks
 │   ├── engines/      GTK 2 engines and runtime: gtk2-engines-*, libgtk2.0-*, libgdk-pixbuf*
 │   └── wallpapers/   rpd-wallpaper, rpd-wallpaper-trixie, their 4K sets, and rpd-common
 │                     (only for the login screen wallpaper; never installed)
@@ -322,13 +327,15 @@ packages/
 It covers **bullseye**, **bookworm** and **trixie** (Debian 11, 12, 13; newer
 Debian releases use trixie) on **amd64, arm64, armhf and i386**: all
 Raspberry Pi OS theme packages, plus every official Debian package they need
-that is not part of a standard Debian desktop. The builder works out that list
-from Debian's signed index. It takes the full dependency closure of the bundled
-packages and subtracts what a Debian desktop already has: the base system
-(priority required, important and standard), the GTK 3 runtime, the LXDE desktop
-with its audio server, NetworkManager and BlueZ. That leaves, for example, the
-GTK 2 runtime, which GNOME, KDE and LXQt systems often lack, the icon fallback
-themes and the libraries of the panel and tray applets.
+that a Debian desktop installation does not already have. The builder works out
+that list from Debian's signed index: the full dependency closure of the bundled
+packages, minus what the Debian installer's desktop installation sets up (the
+base system and the desktop task with its recommended packages). What only
+LXDE uses (Raspberry Pi's panel, the tray applets) is left out when Debian's
+LXDE desktop has it; what every theme needs, only when every Debian desktop
+(LXDE, Xfce, GNOME, KDE, Cinnamon, MATE, LXQt) has it. That leaves only a few
+packages per release, such as the GTK 2 runtime, which not every desktop has.
+On a minimal system, without a desktop task, use the online installer.
 
 When installing, `install-offline.sh` computes the same closure for the chosen
 theme and installs only the members that are missing.
@@ -400,6 +407,7 @@ installed; the installer applies their values to your desktop.
 | Icon fallback themes | [gnome-icon-theme](https://packages.debian.org/stable/gnome-icon-theme), [adwaita-icon-theme-legacy](https://packages.debian.org/stable/adwaita-icon-theme-legacy) |
 | Fonts | [fonts-liberation](https://packages.debian.org/stable/fonts-liberation) |
 | Sounds | [sound-theme-freedesktop](https://packages.debian.org/stable/sound-theme-freedesktop) |
+| Help menu | [debian-reference-common](https://packages.debian.org/stable/debian-reference-common), [debian-reference-en](https://packages.debian.org/stable/debian-reference-en) (Debian Reference, as in Raspberry Pi OS) |
 | Tray applets | [network-manager-applet](https://packages.debian.org/stable/network-manager-applet) (Debian 13; [network-manager-gnome](https://packages.debian.org/bookworm/network-manager-gnome) on Debian 12), [blueman](https://packages.debian.org/stable/blueman) (only if NetworkManager or BlueZ is installed) |
 | Debian logo on the menu button | [desktop-base](https://packages.debian.org/stable/desktop-base), already installed on Debian desktops (falls back to the logo in `debconf`) |
 

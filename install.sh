@@ -170,7 +170,8 @@ DEP_PKGS=()             # of those, offline, the ones installed only as dependen
 APT_PKGS=()             # installed by name from the APT sources
 declare -A PKG_VER=() PKG_FILE=() PKG_SHA=() PKG_SIZE=() PKG_SUITE=() PKG_AID=()
 declare -A IDX_LOADED=() IDX_FAILED=() IN_SET=()
-WORKDIR="" KEYRING="" DEP_INDEX="" BUILD_STAGE=""
+WORKDIR="" KEYRING="" DEP_INDEX="" BUILD_STAGE="" LOG_FILE=""
+ARGV=()
 SYS_ROOT=""             # filesystem root the package builder reads themes from (tests)
 
 # ---------------------------------------------------------------------------
@@ -418,7 +419,7 @@ _pi_panel_pkgs() {
 # Debian packages the themes need; the builder adds their missing dependencies.
 _bundle_deb_pkgs() {
 	printf '%s\n' gtk2-engines-pixbuf libgtk2.0-bin gnome-icon-theme sound-theme-freedesktop "$(_mono_font_pkg "$1")" \
-		"$(_nm_applet_pkg "$1")"
+		"$(_nm_applet_pkg "$1")" debian-reference-common debian-reference-en
 	# blueman only where Debian's panel is used; Raspberry Pi's panel (Debian 13)
 	# has its own Bluetooth plugin
 	if (( $(_suite_rank "$1") >= 3 )); then printf '%s\n' adwaita-icon-theme-legacy; else printf '%s\n' blueman; fi
@@ -882,6 +883,7 @@ download_pkg() {
 # alternative and resolving virtual packages through Provides.
 #   BASE=priority  also start from the Debian base system (priority required,
 #                  important and standard)
+#   RECOMMENDS=1   also follow Recommends, as APT does by default
 #   INSTALLED=1    skip dependencies that installed packages already satisfy
 #   HAVE=FILE      skip dependencies satisfied by the names in FILE
 # Usage: _closure INDEX [ROOT]...
@@ -893,7 +895,7 @@ _closure() {
 			| awk '$1 ~ /^.i/ { $1 = ""; gsub(/\([^)]*\)|,/, " "); n = split($0, a, " "); for (i = 1; i <= n; i++) print a[i] }' \
 			| sort -u >"$inst"
 	fi
-	ROOTS="$*" INST=$inst awk '
+	ROOTS="$*" INST=$inst RECOMMENDS=${RECOMMENDS:-} awk '
 		function resolve(x) { if (x in real) return x; if (x in prov) return prov[x]; return "" }
 		function clean(x) { gsub(/\(.*\)/, "", x); sub(/:[a-z0-9]+/, "", x); gsub(/[ \t]/, "", x); return x }
 		BEGIN {
@@ -904,7 +906,9 @@ _closure() {
 			n = d = pr = pri = ""
 			for (i = 1; i <= NF; i++) {
 				if ($i ~ /^Package: /) n = substr($i, 10)
-				else if ($i ~ /^(Pre-)?Depends: /) { x = $i; sub(/^[^:]*: /, "", x); d = d (d == "" ? "" : ",") x }
+				else if ($i ~ /^(Pre-)?Depends: / || (ENVIRON["RECOMMENDS"] == "1" && $i ~ /^Recommends: /)) {
+					x = $i; sub(/^[^:]*: /, "", x); d = d (d == "" ? "" : ",") x
+				}
 				else if ($i ~ /^Provides: /) pr = substr($i, 11)
 				else if ($i ~ /^Priority: /) pri = substr($i, 11)
 			}
@@ -1554,6 +1558,8 @@ resolve_all() {
 			done
 		fi
 		if [[ -n $(_installed_version bluez) && " ${FETCH_PKGS[*]} " != *" lxpanel-pi "* ]]; then helpers+=(blueman); fi
+		# The Help menu of Raspberry Pi OS: Debian Reference
+		helpers+=(debian-reference-common debian-reference-en)
 	fi
 	APT_PKGS=()
 	for p in "${helpers[@]}"; do
@@ -1781,7 +1787,7 @@ install_local_pkg() {
 _pkg_category() {
 	case $1 in
 		sound-theme-*)               echo sounds ;;
-		lxpanel-pi|lpplug-*|pplug-*|pishutdown|gui-runcmd|network-manager-gnome|network-manager-applet|nm-connection-editor|blueman) echo panel ;;
+		lxpanel-pi|lpplug-*|pplug-*|pishutdown|gui-runcmd|debian-reference-*|network-manager-gnome|network-manager-applet|nm-connection-editor|blueman) echo panel ;;
 		*icon-theme*|*-icons)        echo icons ;;
 		*-theme)                     echo themes ;;
 		fonts-*)                     echo fonts ;;
@@ -1868,13 +1874,38 @@ _stage_pkg() {
 	_stanza "$1/$rel" "$rel" >>"$2/Packages"
 }
 
+# Print, sorted, what a Debian desktop installation of an edition (lxde, xfce,
+# gnome, kde, cinnamon, mate, lxqt) has: the base system and the desktop task
+# with recommended packages. Usage: _desktop_base INDEX EDITION
+_desktop_base() {
+	RECOMMENDS=1 BASE=priority _closure "$1" task-desktop "task-$2-desktop" | LC_ALL=C sort -u
+}
+
+# Print the Debian packages that the given Debian packages and .deb files need
+# and a baseline lacks. Names the baseline has, or provides, satisfy any
+# alternative. Usage: _bundle_closure INDEX BASELINE [PACKAGE]... -- [DEB]...
+_bundle_closure() {
+	local idx=$1 base=$2 have=$2.have
+	local -a pkgs=() roots=()
+	shift 2
+	while (( $# )) && [[ $1 != -- ]]; do pkgs+=("$1"); shift; done
+	(( $# )) && shift
+	awk 'NR == FNR { b[$1] = 1; next }
+		/^Package: / { p = $2 } /^Provides: / && (p in b) {
+			sub(/^Provides: /, ""); n = split($0, a, ",")
+			for (i = 1; i <= n; i++) { x = a[i]; sub(/^[ \t]+/, "", x); sub(/[ \t(].*/, "", x); print x }
+		}' "$base" "$idx" | cat - "$base" | sort -u >"$have"
+	if (( $# )); then mapfile -t roots < <(_deb_depnames "$@"); fi
+	HAVE=$have _closure "$idx" "${pkgs[@]}" "${roots[@]}" | grep -vxF -f "$base" || true
+}
+
 # Build ./packages (install-offline.sh --update-packages): for every release
 # and architecture, the Raspberry Pi OS packages plus the Debian packages they
 # need that a standard Debian desktop lacks. The result replaces ./packages
 # only when complete.
 build_offline_repo() {
-	local dest=$O_REPO stage suite arch p f e idx deb base gtk3 audio i n=0
-	local -a rpis debs got roots
+	local dest=$O_REPO stage suite arch p f e idx deb i n=0
+	local -a rpis debs got lx_debs all_debs lx_got all_got
 	preflight_tools
 	[[ -r $DEBIAN_KEYRING ]] || die "$DEBIAN_KEYRING is missing (install debian-archive-keyring)"
 	step "Building the offline repository from the official repositories"
@@ -1928,22 +1959,26 @@ build_offline_repo() {
 				ok "$ART_PKG ${PKG_VER[$ART_PKG]} (Raspberry Pi OS $suite; login screen wallpaper)"
 			fi
 			# Debian packages: the dependency closure of everything bundled, minus
-			# what a Debian desktop already has: the base system, the GTK 3
-			# runtime, the LXDE desktop and its audio server, and NetworkManager
-			# and BlueZ (the tray applets are only installed where these are).
-			gtk3=libgtk-3-0t64 audio=pipewire-pulse
-			(( $(_suite_rank "$suite") < 3 )) && gtk3=libgtk-3-0 audio=pulseaudio
-			base=$deb.base
-			BASE=priority _closure "$deb" "$gtk3" librsvg2-common hicolor-icon-theme \
-				lxde-core "$audio" network-manager bluez >"$base"
-			# The baseline's names and what they provide satisfy any alternative
-			awk 'NR == FNR { b[$1] = 1; next }
-				/^Package: / { p = $2 } /^Provides: / && (p in b) {
-					sub(/^Provides: /, ""); n = split($0, a, ",")
-					for (i = 1; i <= n; i++) { x = a[i]; sub(/^[ \t]+/, "", x); sub(/[ \t(].*/, "", x); print x }
-				}' "$base" "$deb" | cat - "$base" | sort -u >"$base.have"
-			mapfile -t roots < <(_deb_depnames "${got[@]}")
-			mapfile -t debs < <(HAVE=$base.have _closure "$deb" "${debs[@]}" "${roots[@]}" | grep -vxF -f "$base" \
+			# what Debian's desktop installations already have (the base system
+			# and the desktop task with its recommended packages, as the Debian
+			# installer sets them up). What only the LXDE desktop uses (Raspberry
+			# Pi's panel, the tray applets) is left out when Debian's LXDE desktop
+			# has it; what every theme needs, when every Debian desktop has it.
+			_desktop_base "$deb" lxde >"$deb.lxde"
+			cp -- "$deb.lxde" "$deb.all"
+			for e in xfce gnome kde cinnamon mate lxqt; do
+				_desktop_base "$deb" "$e" | LC_ALL=C comm -12 "$deb.all" - >"$deb.tmp"
+				mv -- "$deb.tmp" "$deb.all"
+			done
+			lx_debs=() all_debs=() lx_got=() all_got=()
+			for p in "${debs[@]}"; do
+				case $p in "$(_nm_applet_pkg "$suite")"|blueman|debian-reference-*) lx_debs+=("$p") ;; *) all_debs+=("$p") ;; esac
+			done
+			for f in "${got[@]}"; do
+				if _pi_panel_pkgs | grep -qxF "$(dpkg-deb -f "$f" Package)"; then lx_got+=("$f"); else all_got+=("$f"); fi
+			done
+			mapfile -t debs < <({ _bundle_closure "$deb" "$deb.all" "${all_debs[@]}" -- "${all_got[@]}"
+				_bundle_closure "$deb" "$deb.lxde" "${lx_debs[@]}" -- "${lx_got[@]}"; } | LC_ALL=C sort -u \
 				| while read -r p; do [[ " ${rpis[*]} " == *" $p "* ]] || echo "$p"; done)
 			for p in "${debs[@]}"; do
 				resolve_pkg "$p" debian || die "$p is not available in Debian $suite/$arch"
@@ -2459,6 +2494,22 @@ _greeter_logo() {
 	_logo_path
 }
 
+# Offer only the adapted icon sets in theme choosers (LXAppearance, Xfce
+# Appearance): a copy of the official index.theme with "Hidden=true" in the
+# user's icon directory keeps the official sets working and inheritable, but
+# out of the lists, where picking one would lose the Debian logo, the extra
+# cursor names and the notification icons Debian's applets use.
+_hide_official_icons() {
+	local b f
+	for b in PiXflat PiXtrix PiX; do
+		[[ -f /usr/share/icons/$b-Debian/index.theme && -f /usr/share/icons/$b/index.theme ]] || continue
+		f=$HOME/.local/share/icons/$b/index.theme
+		if (( O_DRY_RUN )); then log "   [dry-run] $f: hide $b in theme choosers"; continue; fi
+		_track_file "$f"
+		{ grep -v '^Hidden=' "/usr/share/icons/$b/index.theme"; printf 'Hidden=true\n'; } | _write "$f"
+	done
+}
+
 # Map Monospace to Liberation Mono, as Raspberry Pi OS does.
 apply_mono_font() {
 	grep -qiF "Liberation Mono" <<<"$(fc-list : family 2>/dev/null)" || return 0
@@ -2704,8 +2755,15 @@ apply_de_lxde() {
 	if (( O_PANEL )); then _hide_extra_applets; fi
 	if [[ -n ${DISPLAY:-} ]]; then
 		if _running openbox; then run openbox --reconfigure || true; fi
-		if [[ -n $A_WALL ]] && _running pcmanfm; then run pcmanfm --wallpaper-mode=crop --set-wallpaper="$A_WALL" || true; fi
+		# Restart the desktop: it keeps its settings in memory, so the new font,
+		# colours and wallpaper (and the Desktop Preferences dialog) would
+		# otherwise only follow at the next login
+		if _running pcmanfm; then
+			run pcmanfm --desktop-off || true
+			run setsid -f pcmanfm --desktop --profile "$sess" || true
+		fi
 		if (( O_PANEL && ! O_PI_PANEL )) && _running lxpanel; then run lxpanelctl restart || true; fi
+		if (( O_PANEL && O_PI_PANEL )) && _running lxpanel-pi; then run lxpanelctl-pi restart || true; fi
 	fi
 	ok "LXDE configured (session '$sess')"
 	if (( O_PI_PANEL && O_PANEL )); then
@@ -2937,6 +2995,7 @@ apply_main() {
 
 	step "Applying $T_DESC for $(id -un)"
 	apply_gtk_files
+	_hide_official_icons
 	if (( O_GTK4 )); then apply_gtk4_colors; fi
 	if (( O_WITH_FONT )); then apply_mono_font; fi
 	local de
@@ -3244,9 +3303,32 @@ cleanup() {
 	if [[ -n $BUILD_STAGE && -d $BUILD_STAGE ]]; then rm -rf -- "$BUILD_STAGE"; fi
 }
 
+# Copy everything this run prints to ~/pixflat-theme.log in the target user's
+# home (without colours), after a header describing the system, so that a run
+# can be reviewed or shared when something looks wrong.
+_start_log() {
+	local log=${S_HOME:-$HOME}/$APP_NAME.log
+	{ : >>"$log"; } 2>/dev/null || return 0
+	if (( EUID == 0 )) && [[ -n $S_UID ]]; then chown "$S_UID" "$log" 2>/dev/null || true; fi
+	{
+		printf '\n===== %s %s, %s =====\n' "$APP_NAME" "$APP_VERSION" "$(date '+%Y-%m-%d %H:%M:%S %Z')"
+		printf 'Command:  %s %s\n' "$0" "$(_q "${ARGV[@]}")"
+		printf 'System:   %s (%s), %s\n' "${H_PRETTY:-unknown}" "${H_CODENAME:-?}" "$H_ARCH"
+		printf 'User:     %s (uid %s), running as uid %s\n' "${S_USER:-none}" "${S_UID:-?}" "$EUID"
+		printf 'Session:  %s (XDG_CURRENT_DESKTOP=%s, DESKTOP_SESSION=%s, display %s)\n' "${S_PROC:-none}" \
+			"${S_XDG_DESKTOP:-}" "${S_DESKTOP_SESSION:-}" "${S_DISPLAY:-${S_WAYLAND:-none}}"
+		printf 'Packages: %s\n' "$(dpkg-query -W -f='${db:Status-Abbrev} ${Package}=${Version}\n' lxpanel lxpanel-pi \
+			lpplug-menu pishutdown gui-runcmd network-manager network-manager-applet network-manager-gnome bluez \
+			lightdm lightdm-gtk-greeter "$APP_PKG" 2>/dev/null | awk '$1 ~ /^.i/ { print $2 }' | paste -sd' ' -)"
+	} >>"$log"
+	exec > >(tee -a >(sed -u 's/\x1b\[[0-9;]*m//g' >>"$log")) 2>&1
+	LOG_FILE=$log
+}
+
 # Entry point: parse options, then check, uninstall, rebuild ./packages, or
 # install and apply a theme.
 main() {
+	ARGV=("$@")
 	init_colors
 	parse_args "$@"
 	banner
@@ -3262,6 +3344,7 @@ main() {
 	detect_host
 	resolve_user
 	find_session_env
+	_start_log
 	case $O_ACTION in
 		uninstall) do_uninstall; return 0 ;;
 		check)     do_check; return 0 ;;
@@ -3297,6 +3380,7 @@ main() {
 	info "Change the look any time: $(_self_cmd) --apply-only (GTK theme and icons also in your desktop's appearance settings)."
 	if (( O_DO_INSTALL )); then info "Check for updates: $(_self_cmd) --check"; fi
 	info "Undo everything: $(_self_cmd) --uninstall"
+	if [[ -n ${LOG_FILE:-} ]]; then info "Log of this run: $LOG_FILE"; fi
 }
 
 # Run main unless this file is sourced (install-offline.sh sources it).

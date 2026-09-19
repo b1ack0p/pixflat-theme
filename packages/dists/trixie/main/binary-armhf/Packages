@@ -396,143 +396,38 @@ Size: 2102864
 SHA256: 0320628c9ee4e93fcbcd9e84a8a78930a00bb5d923feec32d988dff3f0aa087d
 Description: fullcolor icon theme providing fallback for legacy applications
 
-Package: eject
-Version: 2.41.5-0+deb13u1
-Architecture: armhf
-Depends: libc6 (>= 2.38), libmount1 (= 2.41.5-0+deb13u1)
-Installed-Size: 129
-Maintainer: Chris Hofstaedtler <zeha@debian.org>
-Section: utils
-Priority: optional
-Multi-Arch: foreign
-Source: util-linux
-Filename: pool/dependencies/eject_2.41.5-0+deb13u1_armhf.deb
-Size: 57000
-SHA256: 1a99f11f843fe4716684fd69369651c66eb3c4298f6b88416794f679d7372709
-Description: ejects CDs and operates CD-Changers under Linux
-
-Package: fonts-liberation
-Version: 1:2.1.5-3
+Package: debian-reference-common
+Version: 2.127
 Architecture: all
-Recommends: fonts-liberation-sans-narrow
-Breaks: fonts-liberation2 (<< 1:2.1.5-2~)
-Replaces: fonts-liberation2 (<< 1:2.1.5-2~)
-Installed-Size: 4287
-Maintainer: Debian Fonts Task Force <debian-fonts@lists.debian.org>
-Section: fonts
-Priority: optional
-Multi-Arch: foreign
-Filename: pool/fonts/fonts-liberation_2.1.5-3_all.deb
-Size: 1475396
-SHA256: 3d5c47480067b9615f6bf9b0eda6eefcab9d837af609827015445e8e759b5b8c
-Description: fonts with the same metrics as Times, Arial and Courier
-
-Package: gnome-icon-theme
-Version: 3.12.0-6
-Architecture: all
-Depends: gtk-update-icon-cache, hicolor-icon-theme, librsvg2-common
-Installed-Size: 15184
-Maintainer: Debian GNOME Maintainers <pkg-gnome-maintainers@lists.alioth.debian.org>
-Section: oldlibs
-Priority: optional
-Multi-Arch: foreign
-Filename: pool/icons/gnome-icon-theme_3.12.0-6_all.deb
-Size: 9862704
-SHA256: 221355e43784c46d5da594daacacbeed5c1b0c7899e8903863999a7f17fb27f4
-Description: This package contains the default icon theme used by the GNOME
-
-Package: gtk2-engines-pixbuf
-Version: 2.24.33-7
-Architecture: armhf
-Depends: libc6 (>= 2.4), libcairo2 (>= 1.2.4), libgdk-pixbuf-2.0-0 (>= 2.22.0), libglib2.0-0t64 (>= 2.16.0)
-Installed-Size: 98
-Maintainer: Debian GNOME Maintainers <pkg-gnome-maintainers@lists.alioth.debian.org>
-Section: oldlibs
-Priority: optional
-Multi-Arch: same
-Source: gtk+2.0
-Filename: pool/engines/gtk2-engines-pixbuf_2.24.33-7_armhf.deb
-Size: 22072
-SHA256: f8b0b666aff5e41bd540c6873d6aec52129faa40a486de2bb3bb7eda3d26e6a3
-Description: pixbuf-based theme for GTK 2
-
-Package: libayatana-appindicator3-1
-Version: 0.5.94-1
-Architecture: armhf
-Depends: libayatana-indicator3-7 (>= 0.6.0), libc6 (>= 2.4), libdbusmenu-glib4 (>= 0.4.2), libdbusmenu-gtk3-4 (>= 0.4.2), libglib2.0-0t64 (>= 2.80.0), libgtk-3-0t64 (>= 3.0.0)
-Conflicts: libappindicator3-1
-Replaces: libappindicator3-1
-Provides: libappindicator3-1 (= 12.10)
-Installed-Size: 95
-Maintainer: Ayatana Packagers <pkg-ayatana-devel@lists.alioth.debian.org>
-Section: libs
+Depends: sensible-utils
+Recommends: w3m | www-browser
+Suggests: calibre, debian-reference, debian-reference-de, debian-reference-en, debian-reference-es, debian-reference-fr, debian-reference-id, debian-reference-it, debian-reference-ja, debian-reference-pt, debian-reference-zh-cn, debian-reference-zh-tw, mc, vim
+Installed-Size: 90
+Maintainer: Osamu Aoki <osamu@debian.org>
+Section: doc
 Priority: optional
 Multi-Arch: no
-Source: libayatana-appindicator
-Filename: pool/dependencies/libayatana-appindicator3-1_0.5.94-1_armhf.deb
-Size: 23348
-SHA256: beaa1c1e64f8205c8de0a72cd0bb9f3147e53e465aa2321600654601b113e066
-Description: Ayatana Application Indicators (GTK-3+ version)
+Source: debian-reference
+Filename: pool/panel/debian-reference-common_2.127_all.deb
+Size: 38140
+SHA256: 35e044e9a40718a08682794e6b33c2ebdd2c7ed9a6a139d97ef5bc1f40509015
+Description: Debian system administration guide, common files
 
-Package: libdbusmenu-glib4
-Version: 18.10.20180917~bzr492+repack1-4
-Architecture: armhf
-Depends: libc6 (>= 2.4), libglib2.0-0t64 (>= 2.80.0)
-Installed-Size: 151
-Maintainer: The Ayatana Packagers <pkg-ayatana-devel@lists.alioth.debian.org>
-Section: libs
+Package: debian-reference-en
+Version: 2.127
+Architecture: all
+Pre-Depends: debian-reference-common (>= 2.127)
+Suggests: doc-base
+Installed-Size: 3941
+Maintainer: Osamu Aoki <osamu@debian.org>
+Section: doc
 Priority: optional
-Multi-Arch: same
-Source: libdbusmenu
-Filename: pool/dependencies/libdbusmenu-glib4_18.10.20180917~bzr492+repack1-4_armhf.deb
-Size: 34696
-SHA256: b06ef9d231e53240d84f12a8e06448af252bb57e8c95119faabd124b1250258a
-Description: library for passing menus over DBus
-
-Package: libdbusmenu-gtk3-4
-Version: 18.10.20180917~bzr492+repack1-4
-Architecture: armhf
-Depends: libatk1.0-0t64 (>= 1.12.4), libc6 (>= 2.4), libdbusmenu-glib4 (>= 0.5.90), libgdk-pixbuf-2.0-0 (>= 2.22.0), libglib2.0-0t64 (>= 2.80.0), libgtk-3-0t64 (>= 3.16.2), libpango-1.0-0 (>= 1.14.0)
-Installed-Size: 85
-Maintainer: The Ayatana Packagers <pkg-ayatana-devel@lists.alioth.debian.org>
-Section: libs
-Priority: optional
-Multi-Arch: same
-Source: libdbusmenu
-Filename: pool/dependencies/libdbusmenu-gtk3-4_18.10.20180917~bzr492+repack1-4_armhf.deb
-Size: 22852
-SHA256: 85ed5e4f9b0d004c54abed345eac8e5e0aed611e588b906bd3d802f7b4c3aa9b
-Description: library for passing menus over DBus - GTK-3+ version
-
-Package: libgck-2-2
-Version: 4.4.0.1-3
-Architecture: armhf
-Depends: libc6 (>= 2.4), libglib2.0-0t64 (>= 2.74.0), libp11-kit0 (>= 0.25.0)
-Installed-Size: 223
-Maintainer: Debian GNOME Maintainers <pkg-gnome-maintainers@lists.alioth.debian.org>
-Section: libs
-Priority: optional
-Multi-Arch: same
-Source: gcr4
-Filename: pool/dependencies/libgck-2-2_4.4.0.1-3_armhf.deb
-Size: 64672
-SHA256: d9f24e019e0cae1a577764fdb1f4fa2a12fd73de78ddef46cac9daaff9244f54
-Description: Glib wrapper library for PKCS#11 - runtime
-
-Package: libgcr-4-4
-Version: 4.4.0.1-3
-Architecture: armhf
-Depends: libgck-2-2 (= 4.4.0.1-3), libc6 (>= 2.34), libgcrypt20 (>= 1.11.0), libglib2.0-0t64 (>= 2.74.0), libp11-kit0 (>= 0.25.0)
-Installed-Size: 495
-Maintainer: Debian GNOME Maintainers <pkg-gnome-maintainers@lists.alioth.debian.org>
-Section: libs
-Priority: optional
-Multi-Arch: same
-Source: gcr4
-Filename: pool/dependencies/libgcr-4-4_4.4.0.1-3_armhf.deb
-Size: 174076
-SHA256: 055e15a97f00733a8d4b0f2b1dbef3f5296b17322906f21fd01bbc1d907ad520
-Description: Library for Crypto related tasks
+Multi-Arch: no
+Source: debian-reference
+Filename: pool/panel/debian-reference-en_2.127_all.deb
+Size: 1747040
+SHA256: 81d62f642c571dd5ad2de4aa56ba953c488fc9a0aaf0336dc4ef120ff9e367ce
+Description: Debian system administration guide, English original
 
 Package: libgtk2.0-0t64
 Version: 2.24.33-7
@@ -583,112 +478,4 @@ Filename: pool/engines/libgtk2.0-common_2.24.33-7_all.deb
 Size: 2661068
 SHA256: f874797252735a9d0d14e6e6baf93e7c1ea7b2bc7ee44ef7ec09fb715bfbc9e6
 Description: common files for the GTK graphical user interface library
-
-Package: libnma0
-Version: 1.10.6-5
-Architecture: armhf
-Depends: libc6 (>= 2.38), libcairo2 (>= 1.2.4), libgck-2-2 (>= 4.0.0), libgcr-4-4 (>= 3.8.0), libglib2.0-0t64 (>= 2.38.0), libgtk-3-0t64 (>= 3.21.5), libnm0 (>= 1.8.0), libnma-common (= 1.10.6-5)
-Installed-Size: 295
-Maintainer: Utopia Maintenance Team <pkg-utopia-maintainers@lists.alioth.debian.org>
-Section: libs
-Priority: optional
-Multi-Arch: same
-Source: libnma
-Filename: pool/dependencies/libnma0_1.10.6-5_armhf.deb
-Size: 78328
-SHA256: 4e36203765a69b59db28e7cbb0ebc842aa22f2f46f634e9c475a0c54b38afa35
-Description: NetworkManager GUI library
-
-Package: libnma-common
-Version: 1.10.6-5
-Architecture: all
-Depends: dconf-gsettings-backend | gsettings-backend
-Breaks: network-manager-gnome (<< 1.30.0)
-Installed-Size: 977
-Maintainer: Utopia Maintenance Team <pkg-utopia-maintainers@lists.alioth.debian.org>
-Section: libs
-Priority: optional
-Multi-Arch: foreign
-Source: libnma
-Filename: pool/dependencies/libnma-common_1.10.6-5_all.deb
-Size: 136092
-SHA256: 67e260a3c26be7cd07acd5478c2aff1087593f42136ff3201e243b3165eedc16
-Description: NetworkManager GUI library - translations
-
-Package: libsecret-1-0
-Version: 0.21.7-1
-Architecture: armhf
-Depends: libsecret-common, libc6 (>= 2.4), libgcrypt20 (>= 1.11.0), libglib2.0-0t64 (>= 2.83.0)
-Installed-Size: 298
-Maintainer: Debian GNOME Maintainers <pkg-gnome-maintainers@lists.alioth.debian.org>
-Section: libs
-Priority: optional
-Multi-Arch: same
-Source: libsecret
-Filename: pool/dependencies/libsecret-1-0_0.21.7-1_armhf.deb
-Size: 96160
-SHA256: 73021697b94819169f5baaf0464adf49ecc4b826d752ef1e90fd4a2a0f261fe0
-Description: Secret store
-
-Package: libsecret-common
-Version: 0.21.7-1
-Architecture: all
-Installed-Size: 269
-Maintainer: Debian GNOME Maintainers <pkg-gnome-maintainers@lists.alioth.debian.org>
-Section: libs
-Priority: optional
-Multi-Arch: foreign
-Source: libsecret
-Filename: pool/dependencies/libsecret-common_0.21.7-1_all.deb
-Size: 27936
-SHA256: ce336a4ea6d27bfe85c195b88ab9a8eb95ce197228648634b8ace35ddb9bd808
-Description: Secret store (common files)
-
-Package: network-manager-applet
-Version: 1.36.0-3
-Architecture: armhf
-Depends: libatk1.0-0t64 (>= 1.12.4), libayatana-appindicator3-1 (>= 0.4.90), libc6 (>= 2.34), libcairo2 (>= 1.2.4), libgdk-pixbuf-2.0-0 (>= 2.22.0), libglib2.0-0t64 (>= 2.40.0), libgtk-3-0t64 (>= 3.10), libmm-glib0 (>= 0.7.991), libnm0 (>= 1.16.0), libnma0 (>= 1.8.28), libpango-1.0-0 (>= 1.14.0), libpangocairo-1.0-0 (>= 1.14.0), libsecret-1-0 (>= 0.18), dconf-gsettings-backend | gsettings-backend, nm-connection-editor (= 1.36.0-3), network-manager, policykit-1-gnome | polkit-1-auth-agent, default-dbus-session-bus | dbus-session-bus
-Recommends: notification-daemon, gnome-keyring, gnome-icon-theme, mobile-broadband-provider-info, iso-codes
-Suggests: network-manager-openconnect-gnome, network-manager-openvpn-gnome, network-manager-vpnc-gnome, network-manager-pptp-gnome
-Breaks: network-manager-gnome (<< 1.36.0-3~)
-Replaces: network-manager-gnome (<< 1.36.0-3~)
-Installed-Size: 211
-Maintainer: Utopia Maintenance Team <pkg-utopia-maintainers@lists.alioth.debian.org>
-Section: gnome
-Priority: optional
-Multi-Arch: no
-Filename: pool/panel/network-manager-applet_1.36.0-3_armhf.deb
-Size: 71412
-SHA256: 01ba483e7f33570cb068b13a87063e3ca6add752b882f29a9352ad3afbb4e92f
-Description: network management framework (notification area applet)
-
-Package: nm-connection-editor
-Version: 1.36.0-3
-Architecture: armhf
-Depends: libc6 (>= 2.38), libglib2.0-0t64 (>= 2.44.0), libgtk-3-0t64 (>= 3.21.6), libjansson4 (>= 2.14), libnm0 (>= 1.40.0), libnma0 (>= 1.8.36), libselinux1 (>= 3.1~), network-manager, policykit-1-gnome | polkit-1-auth-agent, default-dbus-session-bus | dbus-session-bus
-Breaks: network-manager-gnome (<< 1.36.0-3~)
-Replaces: network-manager-gnome (<< 1.36.0-3~)
-Installed-Size: 5190
-Maintainer: Utopia Maintenance Team <pkg-utopia-maintainers@lists.alioth.debian.org>
-Section: gnome
-Priority: optional
-Multi-Arch: no
-Source: network-manager-applet
-Filename: pool/panel/nm-connection-editor_1.36.0-3_armhf.deb
-Size: 799304
-SHA256: 8ec9921fe297ef06dc84a194878649858fe230a6f3a7c06861aaef2b7ed824e8
-Description: network management framework (connection configuration editor)
-
-Package: sound-theme-freedesktop
-Version: 0.8-6~deb13u1
-Architecture: all
-Installed-Size: 535
-Maintainer: Debian GNOME Maintainers <pkg-gnome-maintainers@lists.alioth.debian.org>
-Section: sound
-Priority: optional
-Multi-Arch: foreign
-Filename: pool/sounds/sound-theme-freedesktop_0.8-6~deb13u1_all.deb
-Size: 383296
-SHA256: b88c0a3f598c2e423f37db5af9e71324a122729edb8df4fb13b54252401c1a8a
-Description: freedesktop.org sound theme
 
