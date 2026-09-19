@@ -1,6 +1,6 @@
 # Package versions
 
-Built by `install-offline.sh --update-packages` (pixflat-theme 2.0.0) on 2026-09-19 16:18 UTC from
+Built by `install-offline.sh --update-packages` (pixflat-theme 2.0.0) on 2026-09-19 16:57 UTC from
 https://archive.raspberrypi.org/debian and https://deb.debian.org/debian. Every file is listed in `SHA256SUMS`.
 
 | Package | Version | Releases | Source |
@@ -66,11 +66,10 @@ https://archive.raspberrypi.org/debian and https://deb.debian.org/debian. Every 
 | network-manager-applet | 1.36.0-3+b1 | trixie | Debian |
 | network-manager-applet | 1.36.0-3 | trixie | Debian |
 | network-manager-gnome | 1.30.0-2 | bookworm | Debian |
-| network-manager-gnome | 1.36.0-3+b1 | trixie | Debian |
-| network-manager-gnome | 1.36.0-3 | trixie | Debian |
 | nm-connection-editor | 1.36.0-3+b1 | trixie | Debian |
 | nm-connection-editor | 1.36.0-3 | trixie | Debian |
 | notification-daemon | 3.20.0-4+b1 | bookworm | Debian |
+| pishutdown | 0.42 | trixie | Raspberry Pi OS |
 | pixflat-icons | 0.28 | bookworm, trixie | Raspberry Pi OS |
 | pixflat-theme | 0.24+b1 | trixie | Raspberry Pi OS |
 | pixflat-theme | 0.24 | bookworm | Raspberry Pi OS |
@@ -81,6 +80,7 @@ https://archive.raspberrypi.org/debian and https://deb.debian.org/debian. Every 
 | python3-cairo | 1.20.1-5+b1 | bookworm | Debian |
 | python3-gi | 3.42.2-3+b1 | bookworm | Debian |
 | python3-gi-cairo | 3.42.2-3+b1 | bookworm | Debian |
+| rpd-common | 1.30 | trixie | Raspberry Pi OS |
 | rpd-icons | 0.18 | bookworm, trixie | Raspberry Pi OS |
 | rpd-wallpaper | 0.5 | bookworm, trixie | Raspberry Pi OS |
 | rpd-wallpaper-4k | 0.1 | bookworm, trixie | Raspberry Pi OS |

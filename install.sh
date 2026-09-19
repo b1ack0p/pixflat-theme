@@ -35,6 +35,11 @@ readonly RPI_ARCHIVE="https://archive.raspberrypi.org/debian"
 readonly RPI_KEY_URL="${RPI_ARCHIVE}/raspberrypi.gpg.key"
 readonly RPI_KEY_FPR="CF8A1AF502A2AA2D763BAE7E82B129927FA3303E"
 readonly RPI_SUITES=(trixie bookworm bullseye buster)   # newest first
+# Raspberry Pi OS package carrying the login screen wallpaper (Trixie only). It
+# is downloaded and verified like the others but never installed: only the
+# images and their licence are copied into pixflat-theme-debian.
+readonly ART_PKG="rpd-common"
+readonly ART_SUITE="trixie"
 readonly DEBIAN_ARCHIVE="https://deb.debian.org/debian"
 readonly DEBIAN_KEYRING="/usr/share/keyrings/debian-archive-keyring.gpg"
 readonly OFFLINE_SUITES=(bookworm trixie)
@@ -110,10 +115,14 @@ readonly CURSOR_ALIASES=(
 # (lxpanel volume), network (nm-applet) and Bluetooth (blueman). Missing names
 # become symlinks to official images; a leading "!" also overrides the name
 # where the theme maps it to something Raspberry Pi OS's panel does not show.
+# Secure connections show the plain signal icon, as on Raspberry Pi OS.
 readonly ICON_ALIASES=(
 	"audio-volume-high-panel:audio-volume-high"     "audio-volume-medium-panel:audio-volume-medium"
 	"audio-volume-low-panel:audio-volume-low"       "audio-volume-muted-panel:audio-volume-muted"
-	"nm-secure-lock:network-wireless-encrypted"
+	"nm-secure-lock:network-wireless-encrypted"    "nm-device-wired-secure:nm-device-wired"
+	"nm-signal-00-secure:nm-signal-00"              "nm-signal-25-secure:nm-signal-25"
+	"nm-signal-50-secure:nm-signal-50"              "nm-signal-75-secure:nm-signal-75"
+	"nm-signal-100-secure:nm-signal-100"
 	"blueman:bluetooth-active"                      "blueman-tray:bluetooth-active"
 	"blueman-active:bluetooth-online"               "blueman-disabled:bluetooth-offline"
 	"bluetooth-symbolic:bluetooth-active"           "!bluetooth-disabled:bluetooth-offline"
@@ -138,7 +147,7 @@ O_PANEL=1
 O_GTK4=1
 O_PI_PANEL=0            # 1 when Raspberry Pi's own panel (lxpanel-pi) is used
 O_WITH_FONT=1
-O_LIGHTDM=0
+O_LIGHTDM=-1           # -1 = when Debian's LightDM GTK greeter is installed
 O_QT=0
 O_DO_INSTALL=1
 O_DO_APPLY=1
@@ -249,7 +258,8 @@ Options:
       --no-panel          Keep your panel and application menu (default: the
                           Raspberry Pi OS layout).
       --no-gtk4           Do not add the theme colours for GTK 4/libadwaita applications.
-      --lightdm           Also theme the LightDM GTK greeter (login screen).
+      --no-lightdm        Keep the login screen as it is (default: the Raspberry Pi
+                          OS style, when the LightDM GTK greeter is installed).
       --qt                Make Qt applications follow the GTK theme.
       --suite NAME        Raspberry Pi OS release to take packages from
                           (default: matched to this system; bookworm, trixie, ...).
@@ -300,6 +310,7 @@ parse_args() {
 			--no-panel)     O_PANEL=0 ;;
 			--no-gtk4)      O_GTK4=0 ;;
 			--lightdm)      O_LIGHTDM=1 ;;
+			--no-lightdm)   O_LIGHTDM=0 ;;
 			--qt)           O_QT=1 ;;
 			--install-only) O_DO_APPLY=0 ;;
 			--apply-only)   O_DO_INSTALL=0 ;;
@@ -391,21 +402,25 @@ _bundle_rpi_pkgs() {
 	fi
 }
 # Raspberry Pi's own panel (Debian 13 and later) with the plugins that work on
-# Debian. Left out: updater and power (need Raspberry Pi system tools or
-# hardware) and network (nm-applet shows the same icons in the tray).
+# Debian, and its Shutdown dialog (log out, reboot, shut down), shown at the
+# end of the menu. Left out: updater and power (need Raspberry Pi system tools
+# or hardware) and network (nm-applet shows the same icons in the tray).
 _pi_panel_pkgs() {
 	printf '%s\n' lxpanel-pi lpplug-menu lpplug-volumepulse lpplug-bluetooth lpplug-magnifier \
-		lpplug-ejecter pplug-ejecter-data lpplug-clock lpplug-batt
+		lpplug-ejecter pplug-ejecter-data lpplug-clock lpplug-batt pishutdown
 }
 
 # Debian packages the themes need; the builder adds their missing dependencies.
 _bundle_deb_pkgs() {
 	printf '%s\n' gtk2-engines-pixbuf libgtk2.0-bin gnome-icon-theme sound-theme-freedesktop "$(_mono_font_pkg "$1")" \
-		network-manager-gnome
+		"$(_nm_applet_pkg "$1")"
 	# blueman only where Debian's panel is used; Raspberry Pi's panel (Debian 13)
 	# has its own Bluetooth plugin
 	if [[ $1 == trixie ]]; then printf '%s\n' adwaita-icon-theme-legacy; else printf '%s\n' blueman; fi
 }
+# Debian package providing nm-applet (network-manager-gnome is transitional
+# from Debian 13).
+_nm_applet_pkg() { if [[ $1 == bookworm ]]; then echo network-manager-gnome; else echo network-manager-applet; fi; }
 # Debian package providing Liberation Mono, the Raspberry Pi OS monospace font.
 _mono_font_pkg() { if [[ $1 == bookworm ]]; then echo fonts-liberation2; else echo fonts-liberation; fi; }
 
@@ -1297,8 +1312,34 @@ _wallpaper_path() {
 	printf '%s\n' "$w"
 }
 
+# Resolve the newest $ART_PKG for this architecture, without the dependency
+# check (it is never installed). Usage: _art_resolve ARCHIVE
+_art_resolve() {
+	local aid=$1 line v a f sha z d
+	index_load "$aid" "$ART_SUITE" "$H_ARCH" || return 1
+	line=$(index_candidates "$aid" "$ART_SUITE" "$H_ARCH" "$ART_PKG" | head -n1)
+	[[ -n $line ]] || return 1
+	IFS=$'\t' read -r v a f sha z d <<<"$line"
+	PKG_VER[$ART_PKG]=$v PKG_FILE[$ART_PKG]=$f PKG_SHA[$ART_PKG]=$sha PKG_SIZE[$ART_PKG]=${z:-0}
+	PKG_SUITE[$ART_PKG]=$ART_SUITE PKG_AID[$ART_PKG]=$aid
+}
+
+# Unpack the Raspberry Pi OS login screen wallpapers (light and dark) and their
+# licence from the official $ART_PKG package into $WORKDIR/login.
+_login_art() {
+	local aid=rpi deb x=$WORKDIR/art
+	[[ -n $O_REPO ]] && aid=local
+	_art_resolve "$aid" || return 1
+	deb=$(download_pkg "$ART_PKG")
+	rm -rf -- "$x"; mkdir -p "$x" "$WORKDIR/login"
+	dpkg-deb --fsys-tarfile "$deb" | tar -x -C "$x" --wildcards './usr/share/rpd-wallpaper/RPiSystem*.png' \
+		"./usr/share/doc/$ART_PKG/copyright" || return 1
+	install -m 0644 "$x"/usr/share/rpd-wallpaper/RPiSystem*.png "$WORKDIR/login/"
+	install -m 0644 "$x/usr/share/doc/$ART_PKG/copyright" "$WORKDIR/login/copyright"
+}
+
 # Build pixflat-theme-debian from the installed official themes: Xfwm4 themes,
-# icon overlays and, with --lightdm, the greeter settings. Prints its path.
+# icon overlays and the login screen style. Prints its path.
 # shellcheck disable=SC2016  # maintainer scripts contain a literal $1
 build_local_pkg() {
 	local stage=$WORKDIR/localpkg t b f ver icons=()
@@ -1315,20 +1356,32 @@ build_local_pkg() {
 	done
 	if (( O_LIGHTDM )) && [[ -n ${T_GTK:-} ]]; then
 		# The Raspberry Pi OS login screen (pi-greeter.conf) with Debian's GTK
-		# greeter: a centred login box on the Pi background colour, the theme,
-		# icons and font, and the Debian logo as the default user picture.
-		local logo
+		# greeter: its wallpaper (the dark one for dark themes), a centred login
+		# box, the user list, the theme, icons and font, and the Debian logo as
+		# the default user picture.
+		local logo art=/usr/share/$APP_PKG/login bg=#d6d3de img=RPiSystem.png
+		(( T_DARK )) && img=RPiSystem_dark.png
 		logo=$(_greeter_logo || true)
-		mkdir -p "$stage/usr/share/lightdm/lightdm-gtk-greeter.conf.d"
+		mkdir -p "$stage$art" "$stage/usr/share/lightdm/lightdm-gtk-greeter.conf.d" "$stage/usr/share/lightdm/lightdm.conf.d"
+		# Downloaded now, else kept from the installed package (--apply-only)
+		if cp -- "$WORKDIR"/login/* "$stage$art/" 2>/dev/null || cp -- "$art"/* "$stage$art/" 2>/dev/null; then
+			[[ -f $stage$art/$img ]] || img=RPiSystem.png
+			[[ -f $stage$art/$img ]] && bg=$art/$img
+		else
+			warn "the Raspberry Pi OS login screen wallpaper is unavailable; using its background colour"
+		fi
 		{
 			printf '# Installed by %s: the Raspberry Pi OS login screen style\n[greeter]\n' "$APP_NAME"
 			printf 'theme-name=%s\nicon-theme-name=%s-Debian\ncursor-theme-name=%s-Debian\ncursor-theme-size=%s\n' \
 				"$T_GTK" "$T_ICON_BASE" "$T_ICON_BASE" "$T_CURSOR_SIZE"
 			if [[ -n $T_FONT ]]; then printf 'font-name=%s\n' "$T_FONT"; fi
 			printf 'xft-antialias=true\nxft-hintstyle=hintfull\nxft-rgba=rgb\n'
-			printf 'background=#d6d3de\nuser-background=false\nposition=50%%,center 50%%,center\nindicators=~spacer\n'
+			printf 'background=%s\nuser-background=false\nposition=50%%,center 50%%,center\nindicators=~spacer\n' "$bg"
 			if [[ -n $logo ]]; then printf 'default-user-image=%s\n' "$logo"; fi
 		} >"$stage/usr/share/lightdm/lightdm-gtk-greeter.conf.d/60_$APP_NAME.conf"
+		# Raspberry Pi OS lists the users to choose from (pi-greeter's postinst)
+		printf '# Installed by %s: list users, as Raspberry Pi OS does\n[Seat:*]\ngreeter-hide-users=false\n' \
+			"$APP_NAME" >"$stage/usr/share/lightdm/lightdm.conf.d/60_$APP_NAME.conf"
 	fi
 
 	ver="${APP_VERSION}+$(date -u +%Y%m%d%H%M%S)"
@@ -1343,7 +1396,8 @@ Enhances: pixflat-theme, pixflat-icons, pixtrix-theme, pixtrix-icons, pix-theme,
 Description: Debian compatibility layer for the Raspberry Pi OS desktop themes
  Generated locally by $APP_NAME $APP_VERSION from the installed official
  Raspberry Pi OS packages: aliases for cursor names the official cursor themes
- lack, and Xfwm4 themes generated from the official Openbox themes.
+ lack, Xfwm4 themes generated from the official Openbox themes, and the
+ Raspberry Pi OS login screen style for the LightDM GTK greeter.
 EOF
 	{
 		printf '#!/bin/sh\nset -e\nif [ "$1" = configure ] && command -v gtk-update-icon-cache >/dev/null; then\n'
@@ -1458,7 +1512,7 @@ resolve_all() {
 	# works on Debian), and blueman for Bluetooth unless Raspberry Pi's panel,
 	# which has its own Bluetooth plugin, is used.
 	if (( O_PANEL )) && [[ " ${DESKTOPS[*]} " == *" lxde "* ]]; then
-		[[ -n $(_installed_version network-manager) ]] && helpers+=(network-manager-gnome)
+		[[ -n $(_installed_version network-manager) ]] && helpers+=("$(_nm_applet_pkg "$H_SUITE")")
 		if [[ -n $(_installed_version bluez) && " ${FETCH_PKGS[*]} " != *" lxpanel-pi "* ]]; then helpers+=(blueman); fi
 	fi
 	APT_PKGS=()
@@ -1613,6 +1667,11 @@ install_all() {
 		fi
 	done
 	(( O_DRY_RUN )) || _add_theme_engines files
+	if (( O_LIGHTDM )); then
+		if (( O_DRY_RUN )); then log "   [dry-run] unpack the login screen wallpaper from $ART_PKG (not installed)"
+		elif _login_art; then ok "Login screen wallpaper from $ART_PKG ${PKG_VER[$ART_PKG]} (unpacked, not installed)"
+		else warn "$ART_PKG is not available; the login screen uses its background colour"; fi
+	fi
 	for p in "${FETCH_PKGS[@]}" "${APT_PKGS[@]}"; do
 		[[ -n $(_installed_version "$p") ]] || before+=("$p")
 	done
@@ -1640,8 +1699,8 @@ install_all() {
 	_record_installed "${before[@]}"
 }
 
-# Build and install pixflat-theme-debian for the installed themes (and, with
-# --lightdm, the chosen theme for the login screen).
+# Build and install pixflat-theme-debian for the installed themes and the
+# chosen look's login screen.
 install_local_pkg() {
 	local f
 	step "Building the Debian compatibility package ($APP_PKG)"
@@ -1661,12 +1720,12 @@ install_local_pkg() {
 _pkg_category() {
 	case $1 in
 		sound-theme-*)               echo sounds ;;
-		lxpanel-pi|lpplug-*|pplug-*|network-manager-gnome|blueman) echo panel ;;
+		lxpanel-pi|lpplug-*|pplug-*|pishutdown|network-manager-gnome|network-manager-applet|nm-connection-editor|blueman) echo panel ;;
 		*icon-theme*|*-icons)        echo icons ;;
 		*-theme)                     echo themes ;;
 		fonts-*)                     echo fonts ;;
 		gtk2-engines-*|libgtk2.0-*|libgdk-pixbuf*) echo engines ;;   # GTK 2 engines and runtime
-		*wallpaper*)                 echo wallpapers ;;
+		*wallpaper*|"$ART_PKG")      echo wallpapers ;;
 		*)                           echo dependencies ;;
 	esac
 }
@@ -1689,7 +1748,7 @@ _stanza() {
 # shellcheck disable=SC2016  # Markdown backticks
 _write_versions() {
 	local dir=$1 rpi
-	rpi=$(_bundle_rpi_pkgs trixie | paste -sd' ' -)
+	rpi=$({ _bundle_rpi_pkgs trixie; echo "$ART_PKG"; } | paste -sd' ' -)
 	{
 		printf '# Package versions\n\n'
 		printf 'Built by `install-offline.sh --update-packages` (%s %s) on %s from\n' "$APP_NAME" "$APP_VERSION" "$(date -u '+%Y-%m-%d %H:%M UTC')"
@@ -1799,6 +1858,13 @@ build_offline_repo() {
 					if _is_rpi_engine "$e"; then rpis+=("$e"); else debs+=("$e"); fi
 				done
 			done
+			# The login screen wallpaper source; never installed, so its
+			# dependencies are not bundled
+			if [[ $suite == "$ART_SUITE" ]]; then
+				_art_resolve rpi || die "$ART_PKG is not available for $suite/$arch"
+				_stage_pkg "$stage" "$idx" "$ART_PKG" "$(download_pkg "$ART_PKG")"
+				ok "$ART_PKG ${PKG_VER[$ART_PKG]} (Raspberry Pi OS $suite; login screen wallpaper)"
+			fi
 			# Debian packages: the dependency closure of everything bundled, minus
 			# what a Debian desktop already has: the base system, the GTK 3
 			# runtime, the LXDE desktop and its audio server, and NetworkManager
@@ -2163,12 +2229,15 @@ _pi_panel_write() {
 }
 
 # Keep only the Raspberry Pi OS set of notification icons in the LXDE panel:
-# hide, for this user, the autostarted tray applets whose job a Raspberry Pi
-# plugin does (volume; Bluetooth when Raspberry Pi's panel is used). They stay
-# installed; the standard "Hidden=true" autostart override is used.
+# hide, for this user, autostarted tray applets that Raspberry Pi OS does not
+# have (clipboard managers) or whose job a Raspberry Pi plugin does (volume;
+# Bluetooth when Raspberry Pi's panel is used). They stay installed; the
+# standard "Hidden=true" autostart override is used. Each applet is hidden
+# once, the first time it is seen, so an applet the user enables again later
+# is left alone.
 _hide_extra_applets() {
 	local f id
-	local -a pats=(volumeicon pasystray pnmixer)
+	local -a pats=(volumeicon pasystray pnmixer diodon clipit parcellite)
 	(( O_PI_PANEL )) && pats+=(blueman)
 	for id in "${pats[@]}"; do
 		for f in /etc/xdg/autostart/"$id"*.desktop; do
@@ -2176,6 +2245,7 @@ _hide_extra_applets() {
 			f=$HOME/.config/autostart/${f##*/}
 			[[ -f $f ]] && continue   # the user's own autostart choice
 			if (( O_DRY_RUN )); then log "   [dry-run] hide tray applet ${f##*/}"; continue; fi
+			_once "applet:${f##*/}" || continue
 			_track_file "$f"
 			printf '[Desktop Entry]\nType=Application\nName=%s\nHidden=true\n' "${f##*/}" | _write "$f"
 		done
@@ -2196,7 +2266,8 @@ _lxsession_panel() {
 }
 
 # Write the Raspberry Pi OS application menu for LXDE: its category order,
-# names and icons, with separators before Help and Preferences. Category
+# names and icons, with separators before Help and Preferences, and entries of
+# the "Applications" category (the Shutdown dialog) at the end. Category
 # names that match Debian's (lxmenu-data) keep Debian's translations.
 _lxde_menu_write() {
 	local ddir=$HOME/.local/share/desktop-directories menu=$HOME/.config/menus/lxde-applications.menu
@@ -2232,7 +2303,7 @@ _lxde_menu_write() {
 				printf '    <OnlyUnallocated/>\n    <Include>\n      <All/>\n    </Include>\n  </Menu>\n'
 			fi
 		done
-		printf '  <Layout>\n'
+		printf '  <Include>\n    <Category>Applications</Category>\n  </Include>\n  <Layout>\n'
 		for id in development education science office network audio-video graphics game other system-tools utility; do
 			printf '    <Menuname>%s</Menuname>\n' "$id"
 		done
@@ -2299,7 +2370,7 @@ EOF_FC
 _theme_color() {
 	local f v
 	for f in gtk-colours.css gtk-contained.css gtk.css; do
-		f=$SYS_ROOT/usr/share/themes/$T_GTK/gtk-3.0/$f
+		f=${SYS_ROOT:-}/usr/share/themes/$T_GTK/gtk-3.0/$f
 		[[ -f $f ]] || continue
 		v=$(sed -n "s/^[[:space:]]*@define-color[[:space:]]\{1,\}$1[[:space:]]\{1,\}\([^;]*\);.*/\1/p" "$f" | head -n1)
 		if [[ $v =~ ^(#[0-9A-Fa-f]{3,8}|rgba?\([0-9.,[:space:]%]+\)|[a-z]+)$ ]]; then printf '%s\n' "$v"; return 0; fi
@@ -2471,20 +2542,28 @@ apply_de_lxde() {
 		warn "no Openbox configuration found for $sess; window theme not set"
 	fi
 
-	local items=("$HOME/.config/pcmanfm/$sess/desktop-items-0.conf")
-	for i in "$HOME/.config/pcmanfm/$sess"/desktop-items-*.conf; do
-		if [[ -e $i && $i != "${items[0]}" ]]; then items+=("$i"); fi
+	# Desktop preferences (PCManFM), as in Raspberry Pi OS: the same wallpaper,
+	# colours and font on every monitor; trash and drive icons on the first one.
+	local d=$HOME/.config/pcmanfm/$sess n
+	local items=("$d/desktop-items-0.conf" "$d/desktop-items-1.conf")
+	for i in "$d"/desktop-items-*.conf; do
+		if [[ -e $i && " ${items[*]} " != *" $i "* ]]; then items+=("$i"); fi
 	done
 	for i in "${items[@]}"; do
-		_seed "$i" "/etc/xdg/pcmanfm/$sess/$(basename "$i")" "/etc/xdg/pcmanfm/LXDE/$(basename "$i")" || true
+		n=${i##*-}; n=${n%.conf}
+		_seed "$i" "/etc/xdg/pcmanfm/$sess/${i##*/}" "/etc/xdg/pcmanfm/LXDE/${i##*/}" || true
 		_ini_set "$i" '*' desktop_bg "$T_DESK_BG" desktop_fg "$T_DESK_FG" desktop_shadow "$T_DESK_SHADOW" \
-			show_wm_menu 0 sort "mtime;ascending;" show_documents 0 show_trash 1 show_mounts 1
+			show_wm_menu 0 sort "mtime;ascending;" show_documents 0 \
+			show_trash $(( n == 0 )) show_mounts $(( n == 0 ))
 		if [[ -n $T_FONT ]]; then _ini_set "$i" '*' desktop_font "$T_FONT"; fi
-		if [[ -n $A_WALL ]]; then _ini_set "$i" '*' wallpaper_mode crop wallpaper "$A_WALL"; fi
+		if [[ -n $A_WALL ]]; then _ini_set "$i" '*' wallpaper_mode crop wallpaper_common 1 wallpaper "$A_WALL"; fi
 	done
 	# File manager (raspberrypi-ui-mods pcmanfm.conf) and icon sizes (libfm.conf)
 	f=$HOME/.config/pcmanfm/$sess/pcmanfm.conf
 	_seed "$f" "/etc/xdg/pcmanfm/$sess/pcmanfm.conf" /etc/xdg/pcmanfm/LXDE/pcmanfm.conf /etc/xdg/pcmanfm/default/pcmanfm.conf || true
+	# Defaults for monitors without their own desktop-items file
+	_ini_set "$f" desktop desktop_bg "$T_DESK_BG" desktop_fg "$T_DESK_FG" desktop_shadow "$T_DESK_SHADOW" show_wm_menu 0
+	if [[ -n $A_WALL ]]; then _ini_set "$f" desktop wallpaper_mode crop wallpaper "$A_WALL"; fi
 	_ini_set "$f" ui always_show_tabs 0 max_tab_chars 32 win_width 943 win_height 653 splitter_pos 288 \
 		side_pane_mode dirtree view_mode icon show_hidden 0 sort "name;ascending;" columns "name;size;mtime;" \
 		toolbar "newtab;navigation;home;" show_statusbar 1 pathbar_mode_buttons 0
@@ -2505,8 +2584,8 @@ apply_de_lxde() {
 			_lxpanel_write "$HOME/.config/lxpanel/$sess/panels/panel"
 		fi
 		_lxde_menu_write
-		_hide_extra_applets
 	fi
+	if (( O_PANEL )); then _hide_extra_applets; fi
 	if [[ -n ${DISPLAY:-} ]]; then
 		if _running openbox; then run openbox --reconfigure || true; fi
 		if [[ -n $A_WALL ]] && _running pcmanfm; then run pcmanfm --wallpaper-mode=crop --set-wallpaper="$A_WALL" || true; fi
@@ -2986,11 +3065,6 @@ choose_look() {
 		O_ICONS=${icons[REPLY]}
 	fi
 	set_theme "$O_THEME"
-
-	if (( O_INTERACTIVE && ! O_LIGHTDM )) && [[ -x /usr/sbin/lightdm-gtk-greeter ]] \
-		&& ask "Also use this theme on the LightDM login screen" n; then
-		O_LIGHTDM=1
-	fi
 }
 
 # Summarise what will be installed.
@@ -3047,6 +3121,7 @@ main() {
 	esac
 
 	detect_desktops
+	if (( O_LIGHTDM < 0 )); then O_LIGHTDM=$([[ -x /usr/sbin/lightdm-gtk-greeter ]] && echo 1 || echo 0); fi
 	if (( O_DO_INSTALL )); then
 		preflight_tools
 		[[ -z $O_REPO ]] || verify_repo

@@ -338,6 +338,36 @@ Size: 16132
 SHA256: 5d733394303acf9ef1c2d89c2bb3a8b843295b5265bc01ab4be6d2a103646429
 Description: Battery monitor plugin for lxpanel-pi
 
+Package: pishutdown
+Version: 0.42
+Architecture: amd64
+Depends: libc6 (>= 2.34), libglib2.0-0t64 (>= 2.26.0), libgtk-3-0t64 (>= 3.24), libwayland-client0 (>= 1.20.0), procps
+Installed-Size: 240
+Maintainer: Simon Long <simon@raspberrypi.com>
+Section: utils
+Priority: optional
+Multi-Arch: no
+Filename: pool/panel/pishutdown_0.42_amd64.deb
+Size: 19360
+SHA256: 882e33bb18dfb0aa44536212afd0081b36a04b1b6019ae347a06d35d6220ff55
+Description: Desktop shutdown helper for Raspberry Pi
+
+Package: rpd-common
+Version: 1.30
+Architecture: amd64
+Depends: lxsession, lightdm, pcmanfm-pi, lxterminal, pi-greeter, rpd-plym-splash, polkitd, pkexec, pishutdown, libfm-modules, gvfs, gvfs-backends, gvfs-fuse, qt5ct, qt5-style-plugins, rpi-gui-nop, gui-pkinst, pprompt, rfkill, mate-polkit-bin, gnome-keyring, desktop-file-utils, raspi-config, pipewire, pipewire-pulse, wireplumber, libspa-0.2-bluetooth, network-manager, wpasupplicant, firmware-brcm80211, nfs-common, fonts-droid-fallback, fonts-noto-mono, qt6ct, gui-runcmd, libpam-gnome-keyring
+Conflicts: lxde, lxpanel, raspberrypi-ui-mods
+Installed-Size: 1749
+Maintainer: Simon Long <simon@raspberrypi.com>
+Section: x11
+Priority: optional
+Multi-Arch: no
+Source: rpd-metas
+Filename: pool/wallpapers/rpd-common_1.30_amd64.deb
+Size: 1453556
+SHA256: 86fd3cea758553b36c3ac2f640c5261420f93ba72dc50629e07ec8eca1bcc16e
+Description: Common packages used by X and Wayland
+
 Package: adwaita-icon-theme-legacy
 Version: 46.2-2
 Architecture: all
@@ -614,25 +644,10 @@ Section: gnome
 Priority: optional
 Multi-Arch: no
 Source: network-manager-applet (1.36.0-3)
-Filename: pool/dependencies/network-manager-applet_1.36.0-3+b1_amd64.deb
+Filename: pool/panel/network-manager-applet_1.36.0-3+b1_amd64.deb
 Size: 82300
 SHA256: 4816d92fe96ae83d6f486f4e789414ecc4478f3061aff13edcc5df2e790a9420
 Description: network management framework (notification area applet)
-
-Package: network-manager-gnome
-Version: 1.36.0-3+b1
-Architecture: amd64
-Depends: network-manager-applet (= 1.36.0-3+b1), nm-connection-editor (= 1.36.0-3+b1)
-Installed-Size: 19
-Maintainer: Utopia Maintenance Team <pkg-utopia-maintainers@lists.alioth.debian.org>
-Section: oldlibs
-Priority: optional
-Multi-Arch: no
-Source: network-manager-applet (1.36.0-3)
-Filename: pool/panel/network-manager-gnome_1.36.0-3+b1_amd64.deb
-Size: 10776
-SHA256: 46af18ac4223e55dfe0c8c3324eb9d671c1e0286d93e93af902437e69e32a2aa
-Description: transitional package for network-manager-applet and nm-connection-editor
 
 Package: nm-connection-editor
 Version: 1.36.0-3+b1
@@ -646,7 +661,7 @@ Section: gnome
 Priority: optional
 Multi-Arch: no
 Source: network-manager-applet (1.36.0-3)
-Filename: pool/dependencies/nm-connection-editor_1.36.0-3+b1_amd64.deb
+Filename: pool/panel/nm-connection-editor_1.36.0-3+b1_amd64.deb
 Size: 816288
 SHA256: 4aba2adc41783e3837c6f404da637294c2b5bfd32340216c2995a09e9211674a
 Description: network management framework (connection configuration editor)

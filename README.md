@@ -109,12 +109,12 @@ installed.
 | Rendering and sizes | antialiasing, full hinting, RGB subpixel order; cursor 24 px; toolbar icons 24 px with text beside; no icons in menus and buttons |
 | Windows (Openbox, labwc) | theme, title bar with title, minimise, maximise and close (no window menu), round corners and invisible resize handles (Openbox), one desktop, window placement; labwc also drop shadows, window snapping and the window switcher layout |
 | Scaling | Raspberry Pi OS sets no DPI or scale factor, so neither does the installer: your display scaling is kept |
-| Panel (LXDE, Debian 13) | **Raspberry Pi's own panel** (`lxpanel-pi`) with its plugins: menu (Debian logo), launchers for web browser, file manager and terminal, taskbar, tray, eject, Bluetooth, volume, clock, battery (laptops) and magnifier, in the Raspberry Pi OS order and geometry (top, 36 px, 36 px icons, theme colours) |
+| Panel (LXDE, Debian 13) | **Raspberry Pi's own panel** (`lxpanel-pi`) with its plugins: menu (Debian logo), launchers for web browser, file manager and terminal, taskbar, tray, eject, Bluetooth, volume, clock, battery (laptops) and magnifier, in the Raspberry Pi OS order and geometry (top, 36 px, 36 px icons, theme colours); Raspberry Pi's Shutdown dialog (`pishutdown`: log out, reboot, shut down) at the end of the menu |
 | Panel (LXDE, Debian 12) | Debian's panel with the same layout and geometry: menu (Debian logo), launchers, taskbar, tray, volume, clock (`HH:MM`), battery (laptops) |
-| Notification icons | the Raspberry Pi OS icons for sound, network and Bluetooth: Debian's volume plugin, `nm-applet` and `blueman` show the same images as the Raspberry Pi panel plugins (Wi-Fi strength, wired, offline, connecting, VPN, Bluetooth on/off) |
-| Tray applets (LXDE) | `nm-applet` for the network icon is installed if NetworkManager is; `blueman` for Bluetooth if BlueZ is, on Debian 12 (the Raspberry Pi panel on Debian 13 has its own Bluetooth plugin). Extra tray applets that duplicate a Raspberry Pi plugin (other volume applets; `blueman` with the Raspberry Pi panel) are hidden for your user, not removed |
-| Login screen (`--lightdm`) | the Raspberry Pi OS style with Debian's GTK greeter: centred login box on the Raspberry Pi background colour, theme, icons, cursor and font, and the Debian logo as the default user picture |
-| Application menu (LXDE) | Raspberry Pi OS categories and order: Programming, Education, Science, Office, Internet, Sound & Video, Graphics, Games, Other, System Tools, Accessories, then Help and Preferences |
+| Notification icons | the Raspberry Pi OS icons for sound, network and Bluetooth: Debian's volume plugin, `nm-applet` and `blueman` show the same images as the Raspberry Pi panel plugins (Wi-Fi strength, wired, offline, connecting, VPN, Bluetooth on/off); secured connections show the plain signal icon, as in Raspberry Pi OS |
+| Tray applets (LXDE) | `nm-applet` for the network icon is installed if NetworkManager is; `blueman` for Bluetooth if BlueZ is, on Debian 12 (the Raspberry Pi panel on Debian 13 has its own Bluetooth plugin). Tray applets Raspberry Pi OS does not show (clipboard managers such as Diodon, other volume applets, `blueman` with the Raspberry Pi panel) are hidden once for your user, not removed; enable one again in *Desktop Session Settings* and it stays |
+| Login screen | when Debian's LightDM GTK greeter is installed (`--no-lightdm` to skip): the Raspberry Pi OS login screen with Debian's greeter: its wallpaper (the dark one with PiXnoir and PiXonyx), centred login box, user list, theme, icons, cursor and font, and the Debian logo as the default user picture |
+| Application menu (LXDE) | Raspberry Pi OS categories and order: Programming, Education, Science, Office, Internet, Sound & Video, Graphics, Games, Other, System Tools, Accessories, then Help and Preferences, and the Shutdown entry last; empty categories are hidden until an application of that category is installed |
 | File manager (PCManFM) | 943×653 window, folder tree side pane, icon view with thumbnails, new tab/navigation/home toolbar, status bar; icons 48 px, small and side pane icons 24 px, thumbnails 80 px; places: home, root and drives |
 | Desktop | wallpaper, desktop colours and font, trash and drive icons, no documents icon |
 | Sounds | event and input feedback sounds with the freedesktop sound theme |
@@ -170,7 +170,7 @@ All options are optional; they override what is detected.
     --no-font        keep your current fonts
     --no-panel       keep your panel and application menu
     --no-gtk4        no GTK 4/libadwaita colour layer
-    --lightdm        also theme the LightDM GTK greeter (login screen)
+    --no-lightdm     keep the login screen as it is
     --qt             make Qt applications follow the GTK theme
     --install-only   install packages only; --apply-only: choose and apply a look only
     --check          show available updates; change nothing
@@ -187,7 +187,7 @@ Examples:
 ./install.sh -t pixnoir --icons pixtrix   # a specific look, without asking
 ./install.sh --apply-only        # switch the look later
 ./install.sh --only pixflat --4k # one theme family, 4K wallpapers
-./install.sh -d all --lightdm    # every installed desktop and the login screen
+./install.sh -d all              # every installed desktop
 ./install.sh --check             # list available updates
 ./install.sh --uninstall         # undo everything
 ```
@@ -225,7 +225,10 @@ Examples:
      look exactly as in Raspberry Pi OS.
    * **Xfwm4 themes** for PiXflat, PiXnoir, PiXtrix, PiXonyx and PiX, generated from
      the colours and button bitmaps of the official Openbox themes.
-   * with `--lightdm`, the Raspberry Pi OS login screen style for the LightDM GTK greeter.
+   * the Raspberry Pi OS login screen style for the LightDM GTK greeter, with the
+     Raspberry Pi login wallpapers (`RPiSystem.png`, `RPiSystem_dark.png`) and
+     their licence, taken from the official `rpd-common` package. That package is
+     downloaded and verified, never installed.
 6. **Applies the settings** for the detected desktop, live when possible. Every file
    and setting it changes is backed up first (`~/.local/state/pixflat-theme`).
 
@@ -291,10 +294,11 @@ packages/
 │   ├── icons/        pixflat-icons, pixtrix-icons, rpd-icons, gnome-icon-theme, adwaita-icon-theme-legacy
 │   ├── fonts/        fonts-piboto, fonts-nunito-sans, fonts-liberation
 │   ├── sounds/       sound-theme-freedesktop
-│   ├── panel/        lxpanel-pi and plugins (Debian 13), network-manager-gnome, blueman (Debian 12)
+│   ├── panel/        lxpanel-pi, plugins and pishutdown (Debian 13), nm-applet, blueman (Debian 12)
 │   ├── dependencies/ libraries the panel and applets need that a standard LXDE desktop lacks
 │   ├── engines/      GTK 2 engines and runtime: gtk2-engines-*, libgtk2.0-*, libgdk-pixbuf*
-│   └── wallpapers/   rpd-wallpaper, rpd-wallpaper-trixie and their 4K sets
+│   └── wallpapers/   rpd-wallpaper, rpd-wallpaper-trixie, their 4K sets, and rpd-common
+│                     (only for the login screen wallpaper; never installed)
 ├── dists/<release>/main/binary-<arch>/Packages
 ├── SHA256SUMS
 └── VERSIONS.md       exact version and source of every package
@@ -334,10 +338,13 @@ Debian 12 or 13, or a derivative, on amd64, arm64, armhf or i386; bash 4.4+;
 
 ## LightDM tips
 
-* `--lightdm` sets the Raspberry Pi OS login screen style. Settings in
-  `/etc/lightdm/lightdm-gtk-greeter.conf` (written by *LightDM GTK Greeter
-  Settings*) take precedence.
-* To show user pictures, set `greeter-hide-users=false` in `/etc/lightdm/lightdm.conf`.
+* The login screen style is a drop-in file of `pixflat-theme-debian`
+  (`/usr/share/lightdm/lightdm-gtk-greeter.conf.d/60_pixflat-theme.conf`).
+  Settings in `/etc/lightdm/lightdm-gtk-greeter.conf` (written by *LightDM GTK
+  Greeter Settings*) take precedence.
+* The user list is shown, as in Raspberry Pi OS
+  (`/usr/share/lightdm/lightdm.conf.d/60_pixflat-theme.conf`). To hide it again,
+  set `greeter-hide-users=true` in `/etc/lightdm/lightdm.conf`.
 * To use each user's wallpaper on the login screen, install `accountsservice` and
   enable *Use user wallpaper if available* in *LightDM GTK Greeter Settings*. The
   image must be readable outside your home directory, e.g. under
@@ -358,8 +365,8 @@ package files in [`pool/main/`](https://archive.raspberrypi.org/debian/pool/main
 | Icons and cursors | [pixflat-icons](https://archive.raspberrypi.org/debian/pool/main/p/pixflat-icons/), [pixtrix-icons](https://archive.raspberrypi.org/debian/pool/main/p/pixtrix-icons/), [rpd-icons](https://archive.raspberrypi.org/debian/pool/main/r/rpd-icons/) |
 | GTK 2 engines | [gtk2-engines-pixflat](https://archive.raspberrypi.org/debian/pool/main/g/gtk2-engines-pixflat/), [gtk2-engines-clearlookspix](https://archive.raspberrypi.org/debian/pool/main/g/gtk2-engines-clearlookspix/) |
 | Fonts | [fonts-piboto](https://archive.raspberrypi.org/debian/pool/main/f/fonts-piboto/), [fonts-nunito-sans](https://archive.raspberrypi.org/debian/pool/main/f/fonts-nunito-sans/) |
-| Panel (Debian 13) | [lxpanel-pi](https://archive.raspberrypi.org/debian/pool/main/l/lxpanel-pi/), plugins [menu](https://archive.raspberrypi.org/debian/pool/main/p/pplug-menu/), [volume](https://archive.raspberrypi.org/debian/pool/main/p/pplug-volumepulse/), [Bluetooth](https://archive.raspberrypi.org/debian/pool/main/p/pplug-bluetooth/), [eject](https://archive.raspberrypi.org/debian/pool/main/p/pplug-ejecter/), [clock](https://archive.raspberrypi.org/debian/pool/main/p/pplug-clock/), [battery](https://archive.raspberrypi.org/debian/pool/main/p/pplug-batt/), [magnifier](https://archive.raspberrypi.org/debian/pool/main/l/lpplug-magnifier/) |
-| Wallpapers | [rpd-wallpaper](https://archive.raspberrypi.org/debian/pool/main/r/rpd-wallpaper/), [rpd-wallpaper-4k](https://archive.raspberrypi.org/debian/pool/main/r/rpd-wallpaper-4k/), [rpd-wallpaper-trixie](https://archive.raspberrypi.org/debian/pool/main/r/rpd-wallpaper-trixie/), [rpd-wallpaper-trixie-4k](https://archive.raspberrypi.org/debian/pool/main/r/rpd-wallpaper-trixie-4k/) |
+| Panel (Debian 13) | [lxpanel-pi](https://archive.raspberrypi.org/debian/pool/main/l/lxpanel-pi/), plugins [menu](https://archive.raspberrypi.org/debian/pool/main/p/pplug-menu/), [volume](https://archive.raspberrypi.org/debian/pool/main/p/pplug-volumepulse/), [Bluetooth](https://archive.raspberrypi.org/debian/pool/main/p/pplug-bluetooth/), [eject](https://archive.raspberrypi.org/debian/pool/main/p/pplug-ejecter/), [clock](https://archive.raspberrypi.org/debian/pool/main/p/pplug-clock/), [battery](https://archive.raspberrypi.org/debian/pool/main/p/pplug-batt/), [magnifier](https://archive.raspberrypi.org/debian/pool/main/l/lpplug-magnifier/), Shutdown dialog [pishutdown](https://archive.raspberrypi.org/debian/pool/main/p/pishutdown/) |
+| Wallpapers | [rpd-wallpaper](https://archive.raspberrypi.org/debian/pool/main/r/rpd-wallpaper/), [rpd-wallpaper-4k](https://archive.raspberrypi.org/debian/pool/main/r/rpd-wallpaper-4k/), [rpd-wallpaper-trixie](https://archive.raspberrypi.org/debian/pool/main/r/rpd-wallpaper-trixie/), [rpd-wallpaper-trixie-4k](https://archive.raspberrypi.org/debian/pool/main/r/rpd-wallpaper-trixie-4k/); login screen wallpaper from [rpd-common](https://archive.raspberrypi.org/debian/pool/main/r/rpd-metas/) (unpacked, not installed; BSD-3-Clause) |
 
 The desktop settings (fonts, colours, panel and window layout) are the values from
 the Raspberry Pi OS configuration packages
@@ -376,7 +383,7 @@ installed; the installer applies their values to your desktop.
 | Icon fallback themes | [gnome-icon-theme](https://packages.debian.org/stable/gnome-icon-theme), [adwaita-icon-theme-legacy](https://packages.debian.org/stable/adwaita-icon-theme-legacy) |
 | Fonts | [fonts-liberation](https://packages.debian.org/stable/fonts-liberation) |
 | Sounds | [sound-theme-freedesktop](https://packages.debian.org/stable/sound-theme-freedesktop) |
-| Tray applets | [network-manager-gnome](https://packages.debian.org/stable/network-manager-gnome), [blueman](https://packages.debian.org/stable/blueman) (only if NetworkManager or BlueZ is installed) |
+| Tray applets | [network-manager-applet](https://packages.debian.org/stable/network-manager-applet) (Debian 13; [network-manager-gnome](https://packages.debian.org/bookworm/network-manager-gnome) on Debian 12), [blueman](https://packages.debian.org/stable/blueman) (only if NetworkManager or BlueZ is installed) |
 | Debian logo on the menu button | [desktop-base](https://packages.debian.org/stable/desktop-base), already installed on Debian desktops (falls back to the logo in `debconf`) |
 
 ## Credits
