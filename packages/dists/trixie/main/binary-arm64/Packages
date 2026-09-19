@@ -201,6 +201,143 @@ Size: 104446072
 SHA256: 04b609cbbf78445dfa7edd35891e7497bcacd0c5e094b6f4b81965148ee3333a
 Description: 4K Wallpaper for Raspberry Pi Desktop
 
+Package: lxpanel-pi
+Version: 1.11
+Architecture: arm64
+Depends: libc6 (>= 2.34), libcairo2 (>= 1.2.4), libfm-gtk3-4t64 (>= 1.3.2-2~), libfm4t64 (>= 1.2.0), libgdk-pixbuf-2.0-0 (>= 2.22.0), libglib2.0-0t64 (>= 2.80.0), libgtk-3-0t64 (>= 3.24), libkeybinder-3.0-0 (>= 0.3.0), libmenu-cache3 (>= 0.3.2), libpango-1.0-0 (>= 1.14.0), libx11-6
+Installed-Size: 1543
+Maintainer: Simon Long (simon@raspberrypi.com)
+Section: x11
+Priority: optional
+Multi-Arch: allowed
+Filename: pool/panel/lxpanel-pi_1.11_arm64.deb
+Size: 381208
+SHA256: a22105796397ed9eaf3a2976968fac7b505ee6adf319dec44af14753b926d1ca
+Description: Minimal X panel for Raspberry Pi Desktop
+
+Package: lpplug-menu
+Version: 1.25
+Architecture: arm64
+Depends: libc6 (>= 2.17), libcairo2 (>= 1.2.4), libgdk-pixbuf-2.0-0 (>= 2.22.0), libglib2.0-0t64 (>= 2.36.0), libgtk-3-0t64 (>= 3.24), libmenu-cache3 (>= 0.5.0)
+Installed-Size: 305
+Maintainer: Simon Long <simon@raspberrypi.com>
+Section: x11
+Priority: optional
+Multi-Arch: no
+Source: pplug-menu
+Filename: pool/panel/lpplug-menu_1.25_arm64.deb
+Size: 36196
+SHA256: a29a4d7a0ad8aa91c9e59bea5e71b601096211316144a1a4f4471a7092a723a8
+Description: Menu plugin for lxpanel-pi
+
+Package: lpplug-volumepulse
+Version: 1.19
+Architecture: arm64
+Depends: libc6 (>= 2.38), libglib2.0-0t64 (>= 2.30.0), libgtk-3-0t64 (>= 3.24), libpulse0 (>= 0.99.1)
+Recommends: pulseaudio, pipewire, pipewire-pulse, pulseaudio-module-bluetooth, libspa-0.2-bluetooth
+Installed-Size: 138
+Maintainer: Simon Long <simon@raspberrypi.com>
+Section: x11
+Priority: optional
+Multi-Arch: no
+Source: pplug-volumepulse
+Filename: pool/panel/lpplug-volumepulse_1.19_arm64.deb
+Size: 36288
+SHA256: 48ef3e822998c8c763175deaca62358c274d8de87a8b0994156760eebe42309c
+Description: PulseAudio controller plugin for lxpanel-pi
+
+Package: lpplug-bluetooth
+Version: 1.14
+Architecture: arm64
+Depends: libc6 (>= 2.38), libgdk-pixbuf-2.0-0 (>= 2.22.0), libglib2.0-0t64 (>= 2.30.0), libgtk-3-0t64 (>= 3.24)
+Recommends: pulseaudio-module-bluetooth | bluealsa
+Installed-Size: 174
+Maintainer: Simon Long <simon@raspberrypi.com>
+Section: x11
+Priority: optional
+Multi-Arch: no
+Source: pplug-bluetooth
+Filename: pool/panel/lpplug-bluetooth_1.14_arm64.deb
+Size: 37960
+SHA256: 69c2b3ee4cf495760e8d53a623151ad7470bd577c9743771f951d7253143090a
+Description: Bluetooth plugin for lxpanel-pi
+
+Package: lpplug-magnifier
+Version: 1.4
+Architecture: arm64
+Depends: libc6 (>= 2.17), libglib2.0-0t64 (>= 2.12.0), libgtk-3-0t64 (>= 3.24)
+Installed-Size: 107
+Maintainer: Simon Long <simon@raspberrypi.com>
+Section: x11
+Priority: optional
+Multi-Arch: no
+Filename: pool/panel/lpplug-magnifier_1.4_arm64.deb
+Size: 11638
+SHA256: 00017112303bde3c3af6c93c59d5cb9c7a82ecd8093dea699254c405da1eedc7
+Description: Magnifier plugin for lxpanel-pi
+
+Package: lpplug-ejecter
+Version: 1.17
+Architecture: arm64
+Depends: libc6 (>= 2.17), libglib2.0-0t64 (>= 2.40.0), libgtk-3-0t64 (>= 3.24), eject, pplug-ejecter-data
+Installed-Size: 127
+Maintainer: Simon Long <simon@raspberrypi.com>
+Section: x11
+Priority: optional
+Multi-Arch: no
+Source: pplug-ejecter
+Filename: pool/panel/lpplug-ejecter_1.17_arm64.deb
+Size: 18916
+SHA256: c7a06fed652c1b61e2eed02a9972ff382adafa364ec55ab7a46490d6a1bf4315
+Description: Ejecter plugin for lxpanel-pi
+
+Package: pplug-ejecter-data
+Version: 1.17
+Architecture: arm64
+Depends: gtk-update-icon-cache
+Installed-Size: 34
+Maintainer: Simon Long <simon@raspberrypi.com>
+Section: x11
+Priority: optional
+Multi-Arch: no
+Source: pplug-ejecter
+Filename: pool/panel/pplug-ejecter-data_1.17_arm64.deb
+Size: 7716
+SHA256: 9a3e18b9d74d6dbfb02f0730e2a6932bc53acff1507a81fc863aacb1e5a93971
+Description: Ejecter plugin - data
+
+Package: lpplug-clock
+Version: 1.13
+Architecture: arm64
+Depends: libc6 (>= 2.17), libcairo2 (>= 1.14.0), libglib2.0-0t64 (>= 2.26.0), libgtk-3-0t64 (>= 3.24)
+Installed-Size: 92
+Maintainer: Simon Long <simon@raspberrypi.com>
+Section: x11
+Priority: optional
+Multi-Arch: no
+Source: pplug-clock
+Filename: pool/panel/lpplug-clock_1.13_arm64.deb
+Size: 10092
+SHA256: 51672217dc7c300930ea75930c8955b09a147d3f16318eb479367d361fd294fd
+Description: Clock plugin for lxpanel-pi
+
+Package: lpplug-batt
+Version: 1.10
+Architecture: arm64
+Depends: libc6 (>= 2.38), libcairo2 (>= 1.2.4), libgdk-pixbuf-2.0-0 (>= 2.22.0), libglib2.0-0t64 (>= 2.16.0), libgtk-3-0t64 (>= 3.24)
+Conflicts: lxplug-ptbatt
+Replaces: lxplug-ptbatt
+Installed-Size: 123
+Maintainer: Simon Long <simon@raspberrypi.com>
+Section: x11
+Priority: optional
+Multi-Arch: no
+Source: pplug-batt
+Filename: pool/panel/lpplug-batt_1.10_arm64.deb
+Size: 18458
+SHA256: eabc4b9648a6e0857ce3115b98dd9635822b3a701bf7312d455560a2c5c1b53e
+Description: Battery monitor plugin for lxpanel-pi
+
 Package: adwaita-icon-theme-legacy
 Version: 46.2-2
 Architecture: all
@@ -214,6 +351,21 @@ Filename: pool/icons/adwaita-icon-theme-legacy_46.2-2_all.deb
 Size: 2102864
 SHA256: 0320628c9ee4e93fcbcd9e84a8a78930a00bb5d923feec32d988dff3f0aa087d
 Description: fullcolor icon theme providing fallback for legacy applications
+
+Package: eject
+Version: 2.41.5-0+deb13u1
+Architecture: arm64
+Depends: libc6 (>= 2.38), libmount1 (= 2.41.5-0+deb13u1)
+Installed-Size: 194
+Maintainer: Chris Hofstaedtler <zeha@debian.org>
+Section: utils
+Priority: optional
+Multi-Arch: foreign
+Source: util-linux
+Filename: pool/dependencies/eject_2.41.5-0+deb13u1_arm64.deb
+Size: 63664
+SHA256: ba1e8e9ea93305ff98c4a372df1af490be38ec38505f754a4f2b6f54e37c6a12
+Description: ejects CDs and operates CD-Changers under Linux
 
 Package: fonts-liberation
 Version: 1:2.1.5-3
@@ -259,6 +411,84 @@ Filename: pool/engines/gtk2-engines-pixbuf_2.24.33-7_arm64.deb
 Size: 23512
 SHA256: 2d2b73239e001ae841637ec104f041fd07c200a4ebb47bc8f089c71b138a5981
 Description: pixbuf-based theme for GTK 2
+
+Package: libayatana-appindicator3-1
+Version: 0.5.94-1
+Architecture: arm64
+Depends: libayatana-indicator3-7 (>= 0.6.0), libc6 (>= 2.17), libdbusmenu-glib4 (>= 0.4.2), libdbusmenu-gtk3-4 (>= 0.4.2), libglib2.0-0t64 (>= 2.80.0), libgtk-3-0t64 (>= 3.0.0)
+Conflicts: libappindicator3-1
+Replaces: libappindicator3-1
+Provides: libappindicator3-1 (= 12.10)
+Installed-Size: 95
+Maintainer: Ayatana Packagers <pkg-ayatana-devel@lists.alioth.debian.org>
+Section: libs
+Priority: optional
+Multi-Arch: no
+Source: libayatana-appindicator
+Filename: pool/dependencies/libayatana-appindicator3-1_0.5.94-1_arm64.deb
+Size: 24200
+SHA256: 65057e5820cfdad8a8a3f0a1108c48e0aedf2e588392d8546b59ea83ae782568
+Description: Ayatana Application Indicators (GTK-3+ version)
+
+Package: libdbusmenu-glib4
+Version: 18.10.20180917~bzr492+repack1-4
+Architecture: arm64
+Depends: libc6 (>= 2.17), libglib2.0-0t64 (>= 2.80.0)
+Installed-Size: 151
+Maintainer: The Ayatana Packagers <pkg-ayatana-devel@lists.alioth.debian.org>
+Section: libs
+Priority: optional
+Multi-Arch: same
+Source: libdbusmenu
+Filename: pool/dependencies/libdbusmenu-glib4_18.10.20180917~bzr492+repack1-4_arm64.deb
+Size: 37760
+SHA256: f8bcc532260794be207b2fb0941beb041075e6eae14b973e511a53f181bc1b7a
+Description: library for passing menus over DBus
+
+Package: libdbusmenu-gtk3-4
+Version: 18.10.20180917~bzr492+repack1-4
+Architecture: arm64
+Depends: libatk1.0-0t64 (>= 1.12.4), libc6 (>= 2.17), libdbusmenu-glib4 (>= 0.5.90), libgdk-pixbuf-2.0-0 (>= 2.22.0), libglib2.0-0t64 (>= 2.80.0), libgtk-3-0t64 (>= 3.16.2), libpango-1.0-0 (>= 1.14.0)
+Installed-Size: 149
+Maintainer: The Ayatana Packagers <pkg-ayatana-devel@lists.alioth.debian.org>
+Section: libs
+Priority: optional
+Multi-Arch: same
+Source: libdbusmenu
+Filename: pool/dependencies/libdbusmenu-gtk3-4_18.10.20180917~bzr492+repack1-4_arm64.deb
+Size: 25488
+SHA256: 838f838f1ad5500fb346f02d2775572eaf83d0b35dc8b4c4889f0eb2c1ae27f4
+Description: library for passing menus over DBus - GTK-3+ version
+
+Package: libgck-2-2
+Version: 4.4.0.1-3
+Architecture: arm64
+Depends: libc6 (>= 2.17), libglib2.0-0t64 (>= 2.74.0), libp11-kit0 (>= 0.25.0)
+Installed-Size: 287
+Maintainer: Debian GNOME Maintainers <pkg-gnome-maintainers@lists.alioth.debian.org>
+Section: libs
+Priority: optional
+Multi-Arch: same
+Source: gcr4
+Filename: pool/dependencies/libgck-2-2_4.4.0.1-3_arm64.deb
+Size: 68524
+SHA256: 898d263d06d5686dc99ad08f641670b50e9d782044bb8712b71b06b36be37d55
+Description: Glib wrapper library for PKCS#11 - runtime
+
+Package: libgcr-4-4
+Version: 4.4.0.1-3
+Architecture: arm64
+Depends: libgck-2-2 (= 4.4.0.1-3), libc6 (>= 2.28), libgcrypt20 (>= 1.11.0), libglib2.0-0t64 (>= 2.74.0), libp11-kit0 (>= 0.25.0)
+Installed-Size: 753
+Maintainer: Debian GNOME Maintainers <pkg-gnome-maintainers@lists.alioth.debian.org>
+Section: libs
+Priority: optional
+Multi-Arch: same
+Source: gcr4
+Filename: pool/dependencies/libgcr-4-4_4.4.0.1-3_arm64.deb
+Size: 188292
+SHA256: a3428c1d1e6aa73a6f8f6d4c67002d031b587fc7497b49a56af261236a977d06
+Description: Library for Crypto related tasks
 
 Package: libgtk2.0-0t64
 Version: 2.24.33-7
@@ -309,6 +539,116 @@ Filename: pool/engines/libgtk2.0-common_2.24.33-7_all.deb
 Size: 2661068
 SHA256: f874797252735a9d0d14e6e6baf93e7c1ea7b2bc7ee44ef7ec09fb715bfbc9e6
 Description: common files for the GTK graphical user interface library
+
+Package: libnma0
+Version: 1.10.6-5
+Architecture: arm64
+Depends: libc6 (>= 2.38), libcairo2 (>= 1.2.4), libgck-2-2 (>= 4.0.0), libgcr-4-4 (>= 3.8.0), libglib2.0-0t64 (>= 2.38.0), libgtk-3-0t64 (>= 3.21.5), libnm0 (>= 1.8.0), libnma-common (= 1.10.6-5)
+Installed-Size: 412
+Maintainer: Utopia Maintenance Team <pkg-utopia-maintainers@lists.alioth.debian.org>
+Section: libs
+Priority: optional
+Multi-Arch: same
+Source: libnma
+Filename: pool/dependencies/libnma0_1.10.6-5_arm64.deb
+Size: 82352
+SHA256: 4655abcb9f396377d0d527f9cd4d651861a7d873420e1c89491eb4a8572fb23b
+Description: NetworkManager GUI library
+
+Package: libnma-common
+Version: 1.10.6-5
+Architecture: all
+Depends: dconf-gsettings-backend | gsettings-backend
+Breaks: network-manager-gnome (<< 1.30.0)
+Installed-Size: 977
+Maintainer: Utopia Maintenance Team <pkg-utopia-maintainers@lists.alioth.debian.org>
+Section: libs
+Priority: optional
+Multi-Arch: foreign
+Source: libnma
+Filename: pool/dependencies/libnma-common_1.10.6-5_all.deb
+Size: 136092
+SHA256: 67e260a3c26be7cd07acd5478c2aff1087593f42136ff3201e243b3165eedc16
+Description: NetworkManager GUI library - translations
+
+Package: libsecret-1-0
+Version: 0.21.7-1
+Architecture: arm64
+Depends: libsecret-common, libc6 (>= 2.17), libgcrypt20 (>= 1.11.0), libglib2.0-0t64 (>= 2.83.0)
+Installed-Size: 490
+Maintainer: Debian GNOME Maintainers <pkg-gnome-maintainers@lists.alioth.debian.org>
+Section: libs
+Priority: optional
+Multi-Arch: same
+Source: libsecret
+Filename: pool/dependencies/libsecret-1-0_0.21.7-1_arm64.deb
+Size: 102236
+SHA256: 48b439ab6dcaac0ea18ad31143fc673d2c5fbdc3e4c584c96429f24a7792d829
+Description: Secret store
+
+Package: libsecret-common
+Version: 0.21.7-1
+Architecture: all
+Installed-Size: 269
+Maintainer: Debian GNOME Maintainers <pkg-gnome-maintainers@lists.alioth.debian.org>
+Section: libs
+Priority: optional
+Multi-Arch: foreign
+Source: libsecret
+Filename: pool/dependencies/libsecret-common_0.21.7-1_all.deb
+Size: 27936
+SHA256: ce336a4ea6d27bfe85c195b88ab9a8eb95ce197228648634b8ace35ddb9bd808
+Description: Secret store (common files)
+
+Package: network-manager-applet
+Version: 1.36.0-3
+Architecture: arm64
+Depends: libatk1.0-0t64 (>= 1.12.4), libayatana-appindicator3-1 (>= 0.4.90), libc6 (>= 2.34), libcairo2 (>= 1.2.4), libgdk-pixbuf-2.0-0 (>= 2.22.0), libglib2.0-0t64 (>= 2.40.0), libgtk-3-0t64 (>= 3.10), libmm-glib0 (>= 0.7.991), libnm0 (>= 1.16.0), libnma0 (>= 1.8.28), libpango-1.0-0 (>= 1.14.0), libpangocairo-1.0-0 (>= 1.14.0), libsecret-1-0 (>= 0.18), dconf-gsettings-backend | gsettings-backend, nm-connection-editor (= 1.36.0-3), network-manager, policykit-1-gnome | polkit-1-auth-agent, default-dbus-session-bus | dbus-session-bus
+Recommends: notification-daemon, gnome-keyring, gnome-icon-theme, mobile-broadband-provider-info, iso-codes
+Suggests: network-manager-openconnect-gnome, network-manager-openvpn-gnome, network-manager-vpnc-gnome, network-manager-pptp-gnome
+Breaks: network-manager-gnome (<< 1.36.0-3~)
+Replaces: network-manager-gnome (<< 1.36.0-3~)
+Installed-Size: 304
+Maintainer: Utopia Maintenance Team <pkg-utopia-maintainers@lists.alioth.debian.org>
+Section: gnome
+Priority: optional
+Multi-Arch: no
+Filename: pool/dependencies/network-manager-applet_1.36.0-3_arm64.deb
+Size: 74864
+SHA256: 12bfc45fb08339cf6632e90602c939d79b22dfe200b2df4ed7fb88d4cc2f4f24
+Description: network management framework (notification area applet)
+
+Package: network-manager-gnome
+Version: 1.36.0-3
+Architecture: arm64
+Depends: network-manager-applet (= 1.36.0-3), nm-connection-editor (= 1.36.0-3)
+Installed-Size: 18
+Maintainer: Utopia Maintenance Team <pkg-utopia-maintainers@lists.alioth.debian.org>
+Section: oldlibs
+Priority: optional
+Multi-Arch: no
+Source: network-manager-applet
+Filename: pool/panel/network-manager-gnome_1.36.0-3_arm64.deb
+Size: 10488
+SHA256: dac2cf6d709637dd8a51cde4443fd820902b7cdba228d882d94a4db28a1c0d5f
+Description: transitional package for network-manager-applet and nm-connection-editor
+
+Package: nm-connection-editor
+Version: 1.36.0-3
+Architecture: arm64
+Depends: libc6 (>= 2.38), libglib2.0-0t64 (>= 2.44.0), libgtk-3-0t64 (>= 3.21.6), libjansson4 (>= 2.14), libnm0 (>= 1.40.0), libnma0 (>= 1.8.36), libselinux1 (>= 3.1~), network-manager, policykit-1-gnome | polkit-1-auth-agent, default-dbus-session-bus | dbus-session-bus
+Breaks: network-manager-gnome (<< 1.36.0-3~)
+Replaces: network-manager-gnome (<< 1.36.0-3~)
+Installed-Size: 5347
+Maintainer: Utopia Maintenance Team <pkg-utopia-maintainers@lists.alioth.debian.org>
+Section: gnome
+Priority: optional
+Multi-Arch: no
+Source: network-manager-applet
+Filename: pool/dependencies/nm-connection-editor_1.36.0-3_arm64.deb
+Size: 805076
+SHA256: 49d454ed3381df3932e481555ea8540469b5567b3b734a03e0de85191ba4db9e
+Description: network management framework (connection configuration editor)
 
 Package: sound-theme-freedesktop
 Version: 0.8-6~deb13u1

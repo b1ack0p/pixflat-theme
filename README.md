@@ -73,30 +73,74 @@ switches the whole look.
 Use `--only NAME` to install a single theme family instead, and `--4k` for the 4K
 (3840×2160) wallpaper sets.
 
-## What each desktop gets
+## Choosing a look
+
+Any theme can be combined with any installed icon and cursor set. Pick them in
+the menus at the end of the installation, or directly:
+
+| Command | Theme | Icons and cursors |
+|---------|-------|-------------------|
+| `./install.sh -t pixflat` | PiXflat (light) | PiXflat |
+| `./install.sh -t pixnoir` | PiXnoir (dark) | PiXflat |
+| `./install.sh -t pixtrix` | PiXtrix (light) | PiXtrix |
+| `./install.sh -t pixonyx` | PiXonyx (dark) | PiXtrix |
+| `./install.sh -t pix` | PiX (legacy) | PiX |
+| `./install.sh -t pixonyx --icons pixflat` | PiXonyx | PiXflat |
+| `./install.sh -t pixnoir --icons pixtrix` | PiXnoir | PiXtrix |
+
+Add `--apply-only` to switch an installed system without installing anything.
+Everything that belongs to the look is applied automatically with it, exactly as
+Raspberry Pi OS sets it: fonts and font sizes, font rendering, icon and cursor
+sizes, window borders, corners and title bar, panel, application menu, file
+manager and wallpaper. The font follows the theme: Piboto for PiXflat, PiXnoir
+and PiX, Nunito Sans for PiXtrix and PiXonyx.
+
+## What is applied
 
 The values are the ones Raspberry Pi OS itself uses, taken from its
-configuration packages (`raspberrypi-ui-mods`, `rpd-common`, `rpd-x-core`,
-`rpd-wayland-core`).
+configuration packages (`raspberrypi-ui-mods` for Bookworm, `rpd-common`,
+`rpd-x-core` and `rpd-wayland-core` for Trixie). Only Debian's own programs and
+plugins are used; Raspberry Pi's modified panel and file manager are not
+installed.
+
+| Area | Raspberry Pi OS settings applied |
+|------|----------------------------------|
+| Fonts | UI font at 12 pt (PibotoLt, or Nunito Sans Light), window titles and menus at 12 pt, Monospace as Liberation Mono |
+| Rendering and sizes | antialiasing, full hinting, RGB subpixel order; cursor 24 px; toolbar icons 24 px with text beside; no icons in menus and buttons |
+| Windows (Openbox, labwc) | theme, title bar with title, minimise, maximise and close (no window menu), round corners and invisible resize handles (Openbox), one desktop, window placement; labwc also drop shadows, window snapping and the window switcher layout |
+| Scaling | Raspberry Pi OS sets no DPI or scale factor, so neither does the installer: your display scaling is kept |
+| Panel (LXDE, Debian 13) | **Raspberry Pi's own panel** (`lxpanel-pi`) with its plugins: menu (Debian logo), launchers for web browser, file manager and terminal, taskbar, tray, eject, Bluetooth, volume, clock, battery (laptops) and magnifier, in the Raspberry Pi OS order and geometry (top, 36 px, 36 px icons, theme colours) |
+| Panel (LXDE, Debian 12) | Debian's panel with the same layout and geometry: menu (Debian logo), launchers, taskbar, tray, volume, clock (`HH:MM`), battery (laptops) |
+| Notification icons | the Raspberry Pi OS icons for sound, network and Bluetooth: Debian's volume plugin, `nm-applet` and `blueman` show the same images as the Raspberry Pi panel plugins (Wi-Fi strength, wired, offline, connecting, VPN, Bluetooth on/off) |
+| Tray applets (LXDE) | `nm-applet` for the network icon is installed if NetworkManager is; `blueman` for Bluetooth if BlueZ is, on Debian 12 (the Raspberry Pi panel on Debian 13 has its own Bluetooth plugin). Extra tray applets that duplicate a Raspberry Pi plugin (other volume applets; `blueman` with the Raspberry Pi panel) are hidden for your user, not removed |
+| Login screen (`--lightdm`) | the Raspberry Pi OS style with Debian's GTK greeter: centred login box on the Raspberry Pi background colour, theme, icons, cursor and font, and the Debian logo as the default user picture |
+| Application menu (LXDE) | Raspberry Pi OS categories and order: Programming, Education, Science, Office, Internet, Sound & Video, Graphics, Games, Other, System Tools, Accessories, then Help and Preferences |
+| File manager (PCManFM) | 943×653 window, folder tree side pane, icon view with thumbnails, new tab/navigation/home toolbar, status bar; icons 48 px, small and side pane icons 24 px, thumbnails 80 px; places: home, root and drives |
+| Desktop | wallpaper, desktop colours and font, trash and drive icons, no documents icon |
+| Sounds | event and input feedback sounds with the freedesktop sound theme |
+
+On other desktops the same GTK, font, icon and cursor settings are applied
+through their own settings system:
 
 | Desktop | Applied |
 |---------|---------|
-| LXDE | GTK theme, icons, cursor, font and colour scheme (lxsession); Openbox theme, fonts and title layout; PCManFM wallpaper and desktop colours; **panel at the top, 36 px, theme colours, Debian logo on the menu button** |
-| Xfce | GTK theme, icons, cursor, font, **Xfwm4 theme generated from the official Openbox theme**, wallpaper, full-colour panel icons, top panel (36 px) with the Debian logo menu button |
-| GNOME, Budgie | GTK 3 theme (applications and titlebars), icons, cursor, fonts, button layout, wallpaper, light/dark preference |
-| Cinnamon, MATE | GTK theme, icons, cursor, fonts, wallpaper |
+| Xfce | GTK theme, icons, cursor, fonts and rendering, **Xfwm4 theme generated from the official Openbox theme**, wallpaper, top panel (36 px) with the Debian logo menu button, full-colour panel icons |
+| GNOME, Budgie | GTK 3 theme (applications and title bars), icons, cursor, fonts and rendering, button layout, wallpaper, light/dark preference |
+| Cinnamon, MATE | GTK theme, icons, cursor, fonts and rendering, wallpaper |
 | LXQt | icons, cursor, Openbox theme, PCManFM-Qt wallpaper; GTK applications use the GTK theme |
-| Openbox, labwc | window theme and fonts; labwc also cursor and GTK settings |
+| Openbox, labwc | the Raspberry Pi OS window settings above; labwc also cursor and GTK settings |
 | KDE Plasma | icons and cursor (Plasma and Qt keep Breeze) |
 
-Every desktop also gets the GTK 2/3/4 settings files, the default X11 cursor,
-Liberation Mono as the Monospace font, and event sounds with the freedesktop
-sound theme, all as in Raspberry Pi OS. GTK 4/libadwaita
-applications get the theme's colours (see [GTK 2, 3 and 4](#gtk-2-3-and-4)); GNOME
-Shell cannot be themed and keeps its default style.
-The Raspberry Pi-specific panel plugins (`lxpanel-pi`, `wf-panel-pi`) are not
-installed, because they would replace Debian's own panel. Your desktop keeps
-Debian's panel, with the Raspberry Pi OS layout.
+The panel, application menu and tray are set up on the **first installation
+only**. Plugins and applets you add or remove later are kept when you update or
+change the look. Every change to your settings is backed up first; `--uninstall`
+restores them (and switches back to Debian's panel). Use `--no-panel` to keep
+your panel and menu, and `--no-font` to keep your fonts.
+
+Updater and power plugins are not used: they need Raspberry Pi system tools or
+hardware. Raspberry Pi OS has no battery icon set, so desktop power managers
+(`xfce4-power-manager`, GNOME, MATE) keep Debian's battery icons; the Raspberry Pi
+panel's battery plugin draws its own.
 
 ## GTK 2, 3 and 4
 
@@ -124,7 +168,7 @@ All options are optional; they override what is detected.
     --no-wallpaper   skip the wallpaper packages (about 27 or 45 MB)
     --4k             use the 4K wallpaper set instead (about 100 MB)
     --no-font        keep your current fonts
-    --no-panel       keep your panel layout
+    --no-panel       keep your panel and application menu
     --no-gtk4        no GTK 4/libadwaita colour layer
     --lightdm        also theme the LightDM GTK greeter (login screen)
     --qt             make Qt applications follow the GTK theme
@@ -175,12 +219,13 @@ Examples:
    untouched official packages:
    * `PiXflat-Debian` / `PiXtrix-Debian` icon themes. They inherit the official
      icons and add **43 cursor-name aliases** that the official cursor themes lack
-     (`pointer`, `all-scroll`, `nesw-resize`, `grab`, the Qt hash names, …). Each
-     alias is a symlink to an official cursor image, so links, resizing and
-     drag-and-drop show the right cursor.
+     (`pointer`, `all-scroll`, `nesw-resize`, `grab`, the Qt hash names, …) and the
+     icon names Debian's panel applets use for sound, network and Bluetooth. Each
+     alias is a symlink to an official image, so cursors and notification icons
+     look exactly as in Raspberry Pi OS.
    * **Xfwm4 themes** for PiXflat, PiXnoir, PiXtrix, PiXonyx and PiX, generated from
      the colours and button bitmaps of the official Openbox themes.
-   * with `--lightdm`, a LightDM GTK greeter configuration.
+   * with `--lightdm`, the Raspberry Pi OS login screen style for the LightDM GTK greeter.
 6. **Applies the settings** for the detected desktop, live when possible. Every file
    and setting it changes is backed up first (`~/.local/state/pixflat-theme`).
 
@@ -246,6 +291,8 @@ packages/
 │   ├── icons/        pixflat-icons, pixtrix-icons, rpd-icons, gnome-icon-theme, adwaita-icon-theme-legacy
 │   ├── fonts/        fonts-piboto, fonts-nunito-sans, fonts-liberation
 │   ├── sounds/       sound-theme-freedesktop
+│   ├── panel/        lxpanel-pi and plugins (Debian 13), network-manager-gnome, blueman (Debian 12)
+│   ├── dependencies/ libraries the panel and applets need that a standard LXDE desktop lacks
 │   ├── engines/      GTK 2 engines and runtime: gtk2-engines-*, libgtk2.0-*, libgdk-pixbuf*
 │   └── wallpapers/   rpd-wallpaper, rpd-wallpaper-trixie and their 4K sets
 ├── dists/<release>/main/binary-<arch>/Packages
@@ -287,7 +334,7 @@ Debian 12 or 13, or a derivative, on amd64, arm64, armhf or i386; bash 4.4+;
 
 ## LightDM tips
 
-* `--lightdm` sets the greeter theme, icons, font and wallpaper. Settings in
+* `--lightdm` sets the Raspberry Pi OS login screen style. Settings in
   `/etc/lightdm/lightdm-gtk-greeter.conf` (written by *LightDM GTK Greeter
   Settings*) take precedence.
 * To show user pictures, set `greeter-hide-users=false` in `/etc/lightdm/lightdm.conf`.
@@ -311,6 +358,7 @@ package files in [`pool/main/`](https://archive.raspberrypi.org/debian/pool/main
 | Icons and cursors | [pixflat-icons](https://archive.raspberrypi.org/debian/pool/main/p/pixflat-icons/), [pixtrix-icons](https://archive.raspberrypi.org/debian/pool/main/p/pixtrix-icons/), [rpd-icons](https://archive.raspberrypi.org/debian/pool/main/r/rpd-icons/) |
 | GTK 2 engines | [gtk2-engines-pixflat](https://archive.raspberrypi.org/debian/pool/main/g/gtk2-engines-pixflat/), [gtk2-engines-clearlookspix](https://archive.raspberrypi.org/debian/pool/main/g/gtk2-engines-clearlookspix/) |
 | Fonts | [fonts-piboto](https://archive.raspberrypi.org/debian/pool/main/f/fonts-piboto/), [fonts-nunito-sans](https://archive.raspberrypi.org/debian/pool/main/f/fonts-nunito-sans/) |
+| Panel (Debian 13) | [lxpanel-pi](https://archive.raspberrypi.org/debian/pool/main/l/lxpanel-pi/), plugins [menu](https://archive.raspberrypi.org/debian/pool/main/p/pplug-menu/), [volume](https://archive.raspberrypi.org/debian/pool/main/p/pplug-volumepulse/), [Bluetooth](https://archive.raspberrypi.org/debian/pool/main/p/pplug-bluetooth/), [eject](https://archive.raspberrypi.org/debian/pool/main/p/pplug-ejecter/), [clock](https://archive.raspberrypi.org/debian/pool/main/p/pplug-clock/), [battery](https://archive.raspberrypi.org/debian/pool/main/p/pplug-batt/), [magnifier](https://archive.raspberrypi.org/debian/pool/main/l/lpplug-magnifier/) |
 | Wallpapers | [rpd-wallpaper](https://archive.raspberrypi.org/debian/pool/main/r/rpd-wallpaper/), [rpd-wallpaper-4k](https://archive.raspberrypi.org/debian/pool/main/r/rpd-wallpaper-4k/), [rpd-wallpaper-trixie](https://archive.raspberrypi.org/debian/pool/main/r/rpd-wallpaper-trixie/), [rpd-wallpaper-trixie-4k](https://archive.raspberrypi.org/debian/pool/main/r/rpd-wallpaper-trixie-4k/) |
 
 The desktop settings (fonts, colours, panel and window layout) are the values from
@@ -328,6 +376,7 @@ installed; the installer applies their values to your desktop.
 | Icon fallback themes | [gnome-icon-theme](https://packages.debian.org/stable/gnome-icon-theme), [adwaita-icon-theme-legacy](https://packages.debian.org/stable/adwaita-icon-theme-legacy) |
 | Fonts | [fonts-liberation](https://packages.debian.org/stable/fonts-liberation) |
 | Sounds | [sound-theme-freedesktop](https://packages.debian.org/stable/sound-theme-freedesktop) |
+| Tray applets | [network-manager-gnome](https://packages.debian.org/stable/network-manager-gnome), [blueman](https://packages.debian.org/stable/blueman) (only if NetworkManager or BlueZ is installed) |
 | Debian logo on the menu button | [desktop-base](https://packages.debian.org/stable/desktop-base), already installed on Debian desktops (falls back to the logo in `debconf`) |
 
 ## Credits

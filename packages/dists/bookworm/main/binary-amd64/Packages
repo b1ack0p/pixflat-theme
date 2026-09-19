@@ -131,6 +131,40 @@ Size: 80088
 SHA256: 3f414c9ab1029809b77a02fb73abadbd60fc602c255f857aaa20471397f400d8
 Description: clearlookspix theme for GTK+ 2.x
 
+Package: blueman
+Version: 2.3.5-2+b1
+Architecture: amd64
+Depends: libbluetooth3 (>= 4.91), libc6 (>= 2.4), dconf-gsettings-backend | gsettings-backend, python3 (<< 3.12), python3 (>= 3.11~), python3:any, dbus (>= 1.9.18), default-dbus-session-bus | dbus-session-bus, bluez (>= 5.48), bluez-obexd, python3-gi (>= 3.27.2), notification-daemon, librsvg2-common, gnome-icon-theme | mate-icon-theme | elementary-xfce-icon-theme | adwaita-icon-theme | papirus-icon-theme, libpulse-mainloop-glib0, gir1.2-gtk-3.0 (>= 3.22), gir1.2-gdkpixbuf-2.0, gir1.2-glib-2.0, gir1.2-pango-1.0, python3-cairo, python3-gi-cairo, gir1.2-nm-1.0, polkitd
+Recommends: pulseaudio-module-bluetooth
+Installed-Size: 3690
+Maintainer: Christopher Schramm <debian@cschramm.eu>
+Section: x11
+Priority: optional
+Multi-Arch: no
+Source: blueman (2.3.5-2)
+Filename: pool/panel/blueman_2.3.5-2+b1_amd64.deb
+Size: 1087080
+SHA256: d0ae347c3f6cd7b71349132fb1b6f3f73cbc4a0343510c4a8f496d56f37cf219
+Description: Graphical bluetooth manager
+
+Package: bluez-obexd
+Version: 5.66-1+deb12u2
+Architecture: amd64
+Depends: libc6 (>= 2.34), libdbus-1-3 (>= 1.9.14), libglib2.0-0 (>= 2.35.9), libical3 (>= 3.0.0), init-system-helpers (>= 1.52)
+Recommends: dbus-user-session
+Conflicts: obexd-client, obexd-server
+Replaces: obexd-client, obexd-server
+Installed-Size: 693
+Maintainer: Debian Bluetooth Maintainers <team+pkg-bluetooth@tracker.debian.org>
+Section: admin
+Priority: optional
+Multi-Arch: no
+Source: bluez
+Filename: pool/dependencies/bluez-obexd_5.66-1+deb12u2_amd64.deb
+Size: 235600
+SHA256: 5c402934f6e9119d39720da189e3335557e49640b912d9a928861a81f6856c62
+Description: bluez obex daemon
+
 Package: fonts-liberation2
 Version: 2.1.5-1
 Architecture: all
@@ -143,6 +177,133 @@ Filename: pool/fonts/fonts-liberation2_2.1.5-1_all.deb
 Size: 1479148
 SHA256: 35ffaa54f117e633e89a5da89af235a073b34dbe582726fbf6989568f7fd9bda
 Description: Fonts with the same metrics as Times, Arial and Courier (v2)
+
+Package: gir1.2-atk-1.0
+Version: 2.46.0-5
+Architecture: amd64
+Depends: gir1.2-glib-2.0, libatk1.0-0 (>= 2.35.1)
+Installed-Size: 98
+Maintainer: Debian Accessibility Team <pkg-a11y-devel@alioth-lists.debian.net>
+Section: introspection
+Priority: optional
+Multi-Arch: same
+Source: at-spi2-core
+Filename: pool/dependencies/gir1.2-atk-1.0_2.46.0-5_amd64.deb
+Size: 23684
+SHA256: 75f94fffc5b08eb20654a55cfa9724993528aefe6a865b5877516b488a1e68d7
+Description: ATK accessibility toolkit (GObject introspection)
+
+Package: gir1.2-freedesktop
+Version: 1.74.0-3
+Architecture: amd64
+Depends: gir1.2-glib-2.0 (= 1.74.0-3)
+Provides: gir1.2-cairo-1.0 (= 1.74.0-3), gir1.2-dbus-1.0 (= 1.74.0-3), gir1.2-dbusglib-1.0 (= 1.74.0-3), gir1.2-fontconfig-2.0 (= 1.74.0-3), gir1.2-freetype2-2.0 (= 1.74.0-3), gir1.2-gl-1.0 (= 1.74.0-3), gir1.2-libxml2-2.0 (= 1.74.0-3), gir1.2-vulkan-1.0 (= 1.74.0-3), gir1.2-xfixes-4.0 (= 1.74.0-3), gir1.2-xft-2.0 (= 1.74.0-3), gir1.2-xlib-2.0 (= 1.74.0-3), gir1.2-xrandr-1.3 (= 1.74.0-3)
+Installed-Size: 148
+Maintainer: Debian GNOME Maintainers <pkg-gnome-maintainers@lists.alioth.debian.org>
+Section: introspection
+Priority: optional
+Multi-Arch: same
+Source: gobject-introspection
+Filename: pool/dependencies/gir1.2-freedesktop_1.74.0-3_amd64.deb
+Size: 37232
+SHA256: 7fe6941d2a060a8df832b852f3bfcc554e0e6cc788b54a60343790df0fdfac84
+Description: Introspection data for some FreeDesktop components
+
+Package: gir1.2-gdkpixbuf-2.0
+Version: 2.42.10+dfsg-1+deb12u4
+Architecture: amd64
+Depends: gir1.2-glib-2.0 (>= 0.9.3), libgdk-pixbuf-2.0-0 (>= 2.39.2)
+Breaks: libgtk3-perl (<< 0.034-2~)
+Provides: gir1.2-gdkpixdata-2.0 (= 2.42.10+dfsg-1+deb12u4)
+Installed-Size: 43
+Maintainer: Debian GNOME Maintainers <pkg-gnome-maintainers@lists.alioth.debian.org>
+Section: introspection
+Priority: optional
+Multi-Arch: same
+Source: gdk-pixbuf
+Filename: pool/dependencies/gir1.2-gdkpixbuf-2.0_2.42.10+dfsg-1+deb12u4_amd64.deb
+Size: 13840
+SHA256: 801ff4fdfeda2843092b53f47f9af5f79d3726a94321ec3bd0504aad7a10eb41
+Description: GDK Pixbuf library - GObject-Introspection
+
+Package: gir1.2-glib-2.0
+Version: 1.74.0-3
+Architecture: amd64
+Depends: libgirepository-1.0-1 (>= 1.72.0), libglib2.0-0 (>= 2.74.0)
+Provides: gir1.2-gio-2.0 (= 1.74.0-3), gir1.2-girepository-2.0 (= 1.74.0-3), gir1.2-gmodule-2.0 (= 1.74.0-3), gir1.2-gobject-2.0 (= 1.74.0-3)
+Installed-Size: 719
+Maintainer: Debian GNOME Maintainers <pkg-gnome-maintainers@lists.alioth.debian.org>
+Section: introspection
+Priority: optional
+Multi-Arch: same
+Source: gobject-introspection
+Filename: pool/dependencies/gir1.2-glib-2.0_1.74.0-3_amd64.deb
+Size: 159432
+SHA256: f203b2e2a07334d26e7e8d391bdddf20c1dd3c9a43bd40f92e50d70a69c1c551
+Description: Introspection data for GLib, GObject, Gio and GModule
+
+Package: gir1.2-gtk-3.0
+Version: 3.24.38-2~deb12u3
+Architecture: amd64
+Depends: gir1.2-atk-1.0 (>= 2.35.1), gir1.2-freedesktop (>= 1.39.0), gir1.2-gdkpixbuf-2.0 (>= 2.40.0), gir1.2-glib-2.0 (>= 1.39.0), gir1.2-pango-1.0 (>= 1.44.0), libgtk-3-0 (>= 3.24.24), libgtk-3-common
+Breaks: python-gi (<< 3.18), python3-gi (<< 3.18)
+Provides: gir1.2-gdk-3.0 (= 3.24.38-2~deb12u3), gir1.2-gdkx11-3.0 (= 3.24.38-2~deb12u3)
+Installed-Size: 988
+Maintainer: Debian GNOME Maintainers <pkg-gnome-maintainers@lists.alioth.debian.org>
+Section: introspection
+Priority: optional
+Multi-Arch: same
+Source: gtk+3.0
+Filename: pool/dependencies/gir1.2-gtk-3.0_3.24.38-2~deb12u3_amd64.deb
+Size: 220252
+SHA256: f804481c93c5a5c761d8959d216bf4e7cdbe653da66f90b286b82a6b00c71f78
+Description: GTK graphical user interface library -- gir bindings
+
+Package: gir1.2-harfbuzz-0.0
+Version: 6.0.0+dfsg-3
+Architecture: amd64
+Depends: gir1.2-freedesktop, gir1.2-glib-2.0
+Installed-Size: 1677
+Maintainer: أحمد المحمودي (Ahmed El-Mahmoudy) <aelmahmoudy@users.sourceforge.net>
+Section: introspection
+Priority: optional
+Multi-Arch: same
+Source: harfbuzz
+Filename: pool/dependencies/gir1.2-harfbuzz-0.0_6.0.0+dfsg-3_amd64.deb
+Size: 1579364
+SHA256: 4f6509265db076963c0b9e017ca061154213a5efe3b0443dcd690913f6812e14
+Description: OpenType text shaping engine (GObject introspection data)
+
+Package: gir1.2-nm-1.0
+Version: 1.42.4-1+deb12u1
+Architecture: amd64
+Depends: gir1.2-glib-2.0, libnm0 (>= 1.42.2)
+Installed-Size: 342
+Maintainer: Utopia Maintenance Team <pkg-utopia-maintainers@lists.alioth.debian.org>
+Section: introspection
+Priority: optional
+Multi-Arch: same
+Source: network-manager
+Filename: pool/dependencies/gir1.2-nm-1.0_1.42.4-1+deb12u1_amd64.deb
+Size: 77340
+SHA256: 3c6c3d74b8dab018468f0ec387981cbf1e3554cf12c44455519c03d76df5e74c
+Description: GObject introspection data for the libnm library
+
+Package: gir1.2-pango-1.0
+Version: 1.50.12+ds-1
+Architecture: amd64
+Depends: gir1.2-freedesktop (>= 0.9.5), gir1.2-glib-2.0 (>= 0.9.5), gir1.2-harfbuzz-0.0 (>= 2.6.0), libpango-1.0-0 (= 1.50.12+ds-1), libpangocairo-1.0-0 (= 1.50.12+ds-1), libpangoft2-1.0-0 (= 1.50.12+ds-1), libpangoxft-1.0-0 (= 1.50.12+ds-1)
+Provides: gir1.2-pangocairo-1.0 (= 1.50.12+ds-1), gir1.2-pangofc-1.0 (= 1.50.12+ds-1), gir1.2-pangoft2-1.0 (= 1.50.12+ds-1), gir1.2-pangoot-1.0 (= 1.50.12+ds-1), gir1.2-pangoxft-1.0 (= 1.50.12+ds-1)
+Installed-Size: 135
+Maintainer: Debian GNOME Maintainers <pkg-gnome-maintainers@lists.alioth.debian.org>
+Section: introspection
+Priority: optional
+Multi-Arch: same
+Source: pango1.0
+Filename: pool/dependencies/gir1.2-pango-1.0_1.50.12+ds-1_amd64.deb
+Size: 37396
+SHA256: abae1858ecf76dafb5381817d76e27bab61e4a1a4878d8dbd72e17a95f5570e5
+Description: Layout and rendering of internationalized text - gir bindings
 
 Package: gnome-icon-theme
 Version: 3.12.0-5
@@ -173,6 +334,86 @@ Filename: pool/engines/gtk2-engines-pixbuf_2.24.33-2+deb12u1_amd64.deb
 Size: 22816
 SHA256: 16cc8481c37daf58f9d7df427ed66b78a408abd843f8feb09eb08560829444af
 Description: pixbuf-based theme for GTK 2
+
+Package: libayatana-appindicator3-1
+Version: 0.5.92-1
+Architecture: amd64
+Depends: libayatana-indicator3-7 (>= 0.6.0), libc6 (>= 2.4), libdbusmenu-glib4 (>= 0.4.2), libdbusmenu-gtk3-4 (>= 0.4.2), libglib2.0-0 (>= 2.37.3), libgtk-3-0 (>= 3.0.0)
+Conflicts: libappindicator3-1
+Replaces: libappindicator3-1
+Provides: libappindicator3-1 (= 12.10)
+Installed-Size: 90
+Maintainer: Ayatana Packagers <pkg-ayatana-devel@lists.alioth.debian.org>
+Section: libs
+Priority: optional
+Multi-Arch: no
+Source: libayatana-appindicator
+Filename: pool/dependencies/libayatana-appindicator3-1_0.5.92-1_amd64.deb
+Size: 24500
+SHA256: 2ac9a46268e2c4a404b5f6ae8fd92a1735040df81e43fc0f7cf6e41acbad2027
+Description: Ayatana Application Indicators (GTK-3+ version)
+
+Package: libdbusmenu-glib4
+Version: 18.10.20180917~bzr492+repack1-3
+Architecture: amd64
+Depends: libc6 (>= 2.4), libglib2.0-0 (>= 2.37.3)
+Installed-Size: 138
+Maintainer: The Ayatana Packagers <pkg-ayatana-devel@lists.alioth.debian.org>
+Section: libs
+Priority: optional
+Multi-Arch: same
+Source: libdbusmenu
+Filename: pool/dependencies/libdbusmenu-glib4_18.10.20180917~bzr492+repack1-3_amd64.deb
+Size: 42060
+SHA256: 874a26cb414682aa40b00232d4500eae3caf8645e47b1f2c07a39c2c0988c08c
+Description: library for passing menus over DBus
+
+Package: libdbusmenu-gtk3-4
+Version: 18.10.20180917~bzr492+repack1-3
+Architecture: amd64
+Depends: libatk1.0-0 (>= 1.12.4), libc6 (>= 2.4), libdbusmenu-glib4 (>= 0.5.90), libgdk-pixbuf-2.0-0 (>= 2.22.1-0ubuntu4), libglib2.0-0 (>= 2.37.3), libpango-1.0-0 (>= 1.14.0)
+Installed-Size: 104
+Maintainer: The Ayatana Packagers <pkg-ayatana-devel@lists.alioth.debian.org>
+Section: libs
+Priority: optional
+Multi-Arch: same
+Source: libdbusmenu
+Filename: pool/dependencies/libdbusmenu-gtk3-4_18.10.20180917~bzr492+repack1-3_amd64.deb
+Size: 28980
+SHA256: 429388b13c87e2982fabd687ec5ff900859fc4afa5aa7c3a6b58edeaad7b946f
+Description: library for passing menus over DBus - GTK-3+ version
+
+Package: libgck-1-0
+Version: 3.41.1-1+b1
+Architecture: amd64
+Depends: libc6 (>= 2.14), libglib2.0-0 (>= 2.59.0), libp11-kit0 (>= 0.23.18.1)
+Installed-Size: 248
+Maintainer: Debian GNOME Maintainers <pkg-gnome-maintainers@lists.alioth.debian.org>
+Section: libs
+Priority: optional
+Multi-Arch: same
+Source: gcr (3.41.1-1)
+Filename: pool/dependencies/libgck-1-0_3.41.1-1+b1_amd64.deb
+Size: 74980
+SHA256: 9743cd1935001b3e30256bc58cafe558aa31f8ce500d29e7687c0d493a19c555
+Description: Glib wrapper library for PKCS#11 - runtime
+
+Package: libgcr-base-3-1
+Version: 3.41.1-1+b1
+Architecture: amd64
+Depends: libgck-1-0 (= 3.41.1-1+b1), libc6 (>= 2.28), libgcrypt20 (>= 1.10.0), libglib2.0-0 (>= 2.59.0), libp11-kit0 (>= 0.23.18.1)
+Breaks: libgcr-3-1 (<< 3.8.2-2)
+Replaces: libgcr-3-1 (<< 3.8.2-2)
+Installed-Size: 672
+Maintainer: Debian GNOME Maintainers <pkg-gnome-maintainers@lists.alioth.debian.org>
+Section: libs
+Priority: optional
+Multi-Arch: same
+Source: gcr (3.41.1-1)
+Filename: pool/dependencies/libgcr-base-3-1_3.41.1-1+b1_amd64.deb
+Size: 196384
+SHA256: 04a2b8139976da9150147eaac46c78be3ab0b13d19056b4e7bf50333e4cb10aa
+Description: Library for Crypto related tasks
 
 Package: libgdk-pixbuf2.0-0
 Version: 2.40.2-2
@@ -207,23 +448,22 @@ Size: 47924
 SHA256: c11e9c92534e1e8036ad33a7ee1962b120834a02c41594cdf90ce01855ba84a4
 Description: GDK Pixbuf library (deprecated Xlib integration)
 
-Package: libgtk2.0-0
-Version: 2.24.33-2+deb12u1
+Package: libgirepository-1.0-1
+Version: 1.74.0-3
 Architecture: amd64
-Depends: libgtk2.0-common, libatk1.0-0 (>= 1.32.0), libc6 (>= 2.34), libcairo2 (>= 1.6.4-6.1), libcups2 (>= 1.6.0), libfontconfig1 (>= 2.12.6), libgdk-pixbuf-2.0-0 (>= 2.22.1), libglib2.0-0 (>= 2.41.1), libpango-1.0-0 (>= 1.28.3), libpangocairo-1.0-0 (>= 1.28.3), libpangoft2-1.0-0 (>= 1.28.3), libx11-6 (>= 2:1.4.99.1), libxcomposite1 (>= 1:0.4.5), libxcursor1 (>> 1.1.2), libxdamage1 (>= 1:1.1), libxext6, libxfixes3, libxi6, libxinerama1 (>= 2:1.1.4), libxrandr2 (>= 2:1.5.0), libxrender1, adwaita-icon-theme | gnome-icon-theme, hicolor-icon-theme, shared-mime-info
-Recommends: libgail-common, librsvg2-common, libgtk2.0-bin
-Suggests: gvfs
-Provides: gtk2.0-binver-2.10.0
-Installed-Size: 5833
+Depends: libc6 (>= 2.29), libffi8 (>= 3.4), libglib2.0-0 (>= 2.74.0)
+Breaks: libcjs0 (<< 4.8.2-1+b1), libgjs0g (<< 1.68.4-1+b1), libglib-object-introspection-perl (<< 0.049-1+b2), python-gi (<< 3.42.0-1+b1), python3-gi (<< 3.42.0-1+b1), ruby-gobject-introspection (<< 3.4.3-1+b2)
+Provides: libgirepository-1.0-1-with-libffi8 (= 1.74.0-3)
+Installed-Size: 295
 Maintainer: Debian GNOME Maintainers <pkg-gnome-maintainers@lists.alioth.debian.org>
 Section: libs
 Priority: optional
 Multi-Arch: same
-Source: gtk+2.0
-Filename: pool/engines/libgtk2.0-0_2.24.33-2+deb12u1_amd64.deb
-Size: 1810632
-SHA256: d1e9a26a5961748f220c5989c89516fead2a5054b80914f94c71c3fee6fdebe3
-Description: GTK graphical user interface library - old version
+Source: gobject-introspection
+Filename: pool/dependencies/libgirepository-1.0-1_1.74.0-3_amd64.deb
+Size: 100664
+SHA256: 2734bb29083e9b80ecdc273f9af43937b6d34900c9674e128f4abeeffc715885
+Description: Library for handling GObject introspection data (runtime library)
 
 Package: libgtk2.0-bin
 Version: 2.24.33-2+deb12u1
@@ -240,20 +480,175 @@ Size: 10852
 SHA256: 20149fa28e166dcef9e6653e8afd378bb0e826abe308bc929d3b874f95ab1993
 Description: programs for the GTK graphical user interface library
 
-Package: libgtk2.0-common
-Version: 2.24.33-2+deb12u1
+Package: libical3
+Version: 3.0.16-1+b1
+Architecture: amd64
+Depends: tzdata, libc6 (>= 2.34), libdb5.3, libgcc-s1 (>= 3.0), libglib2.0-0 (>= 2.41.1), libicu72 (>= 72.1~rc-1~), libstdc++6 (>= 5.2)
+Installed-Size: 1430
+Maintainer: Nicolas Mora <babelouest@debian.org>
+Section: libs
+Priority: optional
+Multi-Arch: same
+Source: libical3 (3.0.16-1)
+Filename: pool/dependencies/libical3_3.0.16-1+b1_amd64.deb
+Size: 288492
+SHA256: 1be596cc4fd475ee69e4ddd01edca674e891a8dbf495a2db4e8ac9c4ce2be5d2
+Description: iCalendar library implementation in C (runtime)
+
+Package: libnma0
+Version: 1.10.6-1
+Architecture: amd64
+Depends: libc6 (>= 2.14), libcairo2 (>= 1.2.4), libgck-1-0 (>= 3.3.90), libgcr-base-3-1 (>= 3.8.0), libglib2.0-0 (>= 2.37.3), libgtk-3-0 (>= 3.21.5), libnm0 (>= 1.8.0), libnma-common (= 1.10.6-1)
+Installed-Size: 395
+Maintainer: Utopia Maintenance Team <pkg-utopia-maintainers@lists.alioth.debian.org>
+Section: libs
+Priority: optional
+Multi-Arch: same
+Source: libnma
+Filename: pool/dependencies/libnma0_1.10.6-1_amd64.deb
+Size: 96560
+SHA256: 71658202118427ce33796a7eb1a579abc72537f45c9336eb3f45e5e6e4630fa0
+Description: NetworkManager GUI library
+
+Package: libnma-common
+Version: 1.10.6-1
 Architecture: all
-Recommends: libgtk2.0-0
-Installed-Size: 19884
-Maintainer: Debian GNOME Maintainers <pkg-gnome-maintainers@lists.alioth.debian.org>
-Section: misc
+Depends: dconf-gsettings-backend | gsettings-backend
+Breaks: network-manager-gnome (<< 1.30.0)
+Installed-Size: 976
+Maintainer: Utopia Maintenance Team <pkg-utopia-maintainers@lists.alioth.debian.org>
+Section: libs
 Priority: optional
 Multi-Arch: foreign
-Source: gtk+2.0
-Filename: pool/engines/libgtk2.0-common_2.24.33-2+deb12u1_all.deb
-Size: 2659900
-SHA256: f55a9800d3721b1de246e4bfaf94a63ca50efdfa49eb5fa2362ed4fa79258299
-Description: common files for the GTK graphical user interface library
+Source: libnma
+Filename: pool/dependencies/libnma-common_1.10.6-1_all.deb
+Size: 135464
+SHA256: c977e0387a14f22d1dc7fe3c0fc96204fba07a028417d64767a06137e69fe06e
+Description: NetworkManager GUI library - translations
+
+Package: libpulse-mainloop-glib0
+Version: 16.1+dfsg1-2+b1
+Architecture: amd64
+Depends: libc6 (>= 2.4), libglib2.0-0 (>= 2.28.0), libpulse0 (= 16.1+dfsg1-2+b1)
+Installed-Size: 70
+Maintainer: Pulseaudio maintenance team <pkg-pulseaudio-devel@lists.alioth.debian.org>
+Section: libs
+Priority: optional
+Multi-Arch: same
+Source: pulseaudio (16.1+dfsg1-2)
+Filename: pool/dependencies/libpulse-mainloop-glib0_16.1+dfsg1-2+b1_amd64.deb
+Size: 27292
+SHA256: adb9309bc4418b7c67c6bf97fa22bc9efc26c0659e21e1c79abad66fc11b76b1
+Description: PulseAudio client libraries (glib support)
+
+Package: libsecret-1-0
+Version: 0.20.5-3
+Architecture: amd64
+Depends: libc6 (>= 2.14), libgcrypt20 (>= 1.10.0), libglib2.0-0 (>= 2.59.0), libsecret-common
+Breaks: seahorse (<< 3.10)
+Installed-Size: 432
+Maintainer: Debian GNOME Maintainers <pkg-gnome-maintainers@lists.alioth.debian.org>
+Section: libs
+Priority: optional
+Multi-Arch: same
+Source: libsecret
+Filename: pool/dependencies/libsecret-1-0_0.20.5-3_amd64.deb
+Size: 115364
+SHA256: 492ec837a8eb5ed2a0205041bc02ba3fb0dc253bfd89aad09a2794c8ce26f778
+Description: Secret store
+
+Package: libsecret-common
+Version: 0.20.5-3
+Architecture: all
+Installed-Size: 247
+Maintainer: Debian GNOME Maintainers <pkg-gnome-maintainers@lists.alioth.debian.org>
+Section: libs
+Priority: optional
+Multi-Arch: foreign
+Source: libsecret
+Filename: pool/dependencies/libsecret-common_0.20.5-3_all.deb
+Size: 28460
+SHA256: dd3660e33219884aa53295b04bf9e48ba4883614c9d705244e45f8c15b491438
+Description: Secret store (common files)
+
+Package: network-manager-gnome
+Version: 1.30.0-2
+Architecture: amd64
+Depends: libatk1.0-0 (>= 1.12.4), libayatana-appindicator3-1 (>= 0.4.90), libc6 (>= 2.34), libcairo2 (>= 1.2.4), libgdk-pixbuf-2.0-0 (>= 2.22.0), libglib2.0-0 (>= 2.43.2), libgtk-3-0 (>= 3.21.6), libjansson4 (>= 2.14), libmm-glib0 (>= 0.7.991), libnm0 (>= 1.16.0), libnma0 (>= 1.8.36), libpango-1.0-0 (>= 1.14.0), libpangocairo-1.0-0 (>= 1.14.0), libsecret-1-0 (>= 0.18), libselinux1 (>= 3.1~), dconf-gsettings-backend | gsettings-backend, network-manager, policykit-1-gnome | polkit-1-auth-agent, default-dbus-session-bus | dbus-session-bus
+Recommends: notification-daemon, gnome-keyring, gnome-icon-theme, mobile-broadband-provider-info, iso-codes
+Suggests: network-manager-openconnect-gnome, network-manager-openvpn-gnome, network-manager-vpnc-gnome, network-manager-pptp-gnome
+Breaks: libnma-common (<< 1.10.4)
+Replaces: libnma-common (<< 1.10.4)
+Installed-Size: 5570
+Maintainer: Utopia Maintenance Team <pkg-utopia-maintainers@lists.alioth.debian.org>
+Section: gnome
+Priority: optional
+Multi-Arch: no
+Source: network-manager-applet
+Filename: pool/panel/network-manager-gnome_1.30.0-2_amd64.deb
+Size: 894460
+SHA256: 18fced34a84e8271f225b93c9fbdbad3b136299670d4a820088afb228de7765c
+Description: network management framework (GNOME frontend)
+
+Package: notification-daemon
+Version: 3.20.0-4+b1
+Architecture: amd64
+Depends: libatk1.0-0 (>= 1.12.4), libc6 (>= 2.4), libcairo2 (>= 1.10.0), libgdk-pixbuf-2.0-0 (>= 2.22.0), libglib2.0-0 (>= 2.37.3), libgtk-3-0 (>= 3.19.12), libpango-1.0-0 (>= 1.14.0), libx11-6
+Installed-Size: 390
+Maintainer: Debian GNOME Maintainers <pkg-gnome-maintainers@lists.alioth.debian.org>
+Section: x11
+Priority: optional
+Multi-Arch: no
+Source: notification-daemon (3.20.0-4)
+Filename: pool/dependencies/notification-daemon_3.20.0-4+b1_amd64.deb
+Size: 61808
+SHA256: 06e0106cb7dca2446f14bb2c3735752c359e8710084fb35fdcd53cd7bea872f1
+Description: daemon for displaying passive pop-up notifications
+
+Package: python3-cairo
+Version: 1.20.1-5+b1
+Architecture: amd64
+Depends: python3 (<< 3.12), python3 (>= 3.11~), python3:any, libc6 (>= 2.14), libcairo2 (>= 1.15.12)
+Installed-Size: 290
+Maintainer: Debian Python Team <team+python@tracker.debian.org>
+Section: python
+Priority: optional
+Multi-Arch: same
+Source: pycairo (1.20.1-5)
+Filename: pool/dependencies/python3-cairo_1.20.1-5+b1_amd64.deb
+Size: 63108
+SHA256: 2d86937453d80ae420dfed83a36c80b96ef74b562f40820de09aec1d83a1ef86
+Description: Python3 bindings for the Cairo vector graphics library
+
+Package: python3-gi
+Version: 3.42.2-3+b1
+Architecture: amd64
+Depends: gir1.2-glib-2.0 (>= 1.48.0), python3 (<< 3.12), python3 (>= 3.11~), python3:any, libc6 (>= 2.14), libffi8 (>= 3.4), libgirepository-1.0-1 (>= 1.62.0-4~), libgirepository-1.0-1-with-libffi8 (>= 1.62.0-4~), libglib2.0-0 (>= 2.67.3)
+Installed-Size: 730
+Maintainer: Debian GNOME Maintainers <pkg-gnome-maintainers@lists.alioth.debian.org>
+Section: python
+Priority: optional
+Multi-Arch: allowed
+Source: pygobject (3.42.2-3)
+Filename: pool/dependencies/python3-gi_3.42.2-3+b1_amd64.deb
+Size: 219356
+SHA256: 6cdf29f0cface26d98c767e83882f471f14ee30cad9e71f81caccd603e97274c
+Description: Python 3 bindings for gobject-introspection libraries
+
+Package: python3-gi-cairo
+Version: 3.42.2-3+b1
+Architecture: amd64
+Depends: python3-cairo (>= 1.11.1), python3-gi (= 3.42.2-3+b1), python3 (<< 3.12), python3 (>= 3.11~), libc6 (>= 2.4), libcairo-gobject2 (>= 1.12.16), libcairo2 (>= 1.10.0), libglib2.0-0 (>= 2.56.0)
+Installed-Size: 41
+Maintainer: Debian GNOME Maintainers <pkg-gnome-maintainers@lists.alioth.debian.org>
+Section: python
+Priority: optional
+Multi-Arch: no
+Source: pygobject (3.42.2-3)
+Filename: pool/dependencies/python3-gi-cairo_3.42.2-3+b1_amd64.deb
+Size: 11740
+SHA256: a6ea9d4926a6978f9767e7d66c35a5723b76fa7dedf54c101349b77866eace6e
+Description: Python 3 Cairo bindings for the GObject library
 
 Package: sound-theme-freedesktop
 Version: 0.8-2

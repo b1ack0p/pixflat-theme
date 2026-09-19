@@ -105,6 +105,21 @@ readonly CURSOR_ALIASES=(
 	"fcf1c3c7cd4491d801f1e1c78f100000:nesw-resize"
 )
 
+# Icon names Debian's panel applets request, mapped to the Raspberry Pi OS icons
+# its own panel plugins show, so the notification area looks the same: sound
+# (lxpanel volume), network (nm-applet) and Bluetooth (blueman). Missing names
+# become symlinks to official images; a leading "!" also overrides the name
+# where the theme maps it to something Raspberry Pi OS's panel does not show.
+readonly ICON_ALIASES=(
+	"audio-volume-high-panel:audio-volume-high"     "audio-volume-medium-panel:audio-volume-medium"
+	"audio-volume-low-panel:audio-volume-low"       "audio-volume-muted-panel:audio-volume-muted"
+	"nm-secure-lock:network-wireless-encrypted"
+	"blueman:bluetooth-active"                      "blueman-tray:bluetooth-active"
+	"blueman-active:bluetooth-online"               "blueman-disabled:bluetooth-offline"
+	"bluetooth-symbolic:bluetooth-active"           "!bluetooth-disabled:bluetooth-offline"
+	"!bluetooth-disabled-symbolic:bluetooth-offline" "bluetooth-disconnected-symbolic:bluetooth-inactive"
+)
+
 # ---------------------------------------------------------------------------
 # Options (O_*), theme (T_*), session (S_*) and host (H_*) state
 # ---------------------------------------------------------------------------
@@ -121,6 +136,7 @@ O_WITH_WALLPAPER=1
 O_4K=0
 O_PANEL=1
 O_GTK4=1
+O_PI_PANEL=0            # 1 when Raspberry Pi's own panel (lxpanel-pi) is used
 O_WITH_FONT=1
 O_LIGHTDM=0
 O_QT=0
@@ -230,8 +246,8 @@ Options:
       --no-wallpaper      Do not install or set the Raspberry Pi wallpapers.
       --4k                Use the 4K (3840x2160) wallpaper set instead (about 100 MB).
       --no-font           Do not install or set the Raspberry Pi UI font.
-      --no-panel          Keep your panel as it is (default: Raspberry Pi OS layout
-                          on LXDE and Xfce: top, 36 px, Debian logo menu button).
+      --no-panel          Keep your panel and application menu (default: the
+                          Raspberry Pi OS layout).
       --no-gtk4           Do not add the theme colours for GTK 4/libadwaita applications.
       --lightdm           Also theme the LightDM GTK greeter (login screen).
       --qt                Make Qt applications follow the GTK theme.
@@ -371,12 +387,24 @@ _bundle_rpi_pkgs() {
 		rpd-wallpaper-4k pix-theme rpd-icons gtk2-engines-clearlookspix
 	if [[ $1 == trixie ]]; then
 		printf '%s\n' pixtrix-theme pixtrix-icons fonts-nunito-sans rpd-wallpaper-trixie rpd-wallpaper-trixie-4k
+		_pi_panel_pkgs
 	fi
 }
+# Raspberry Pi's own panel (Debian 13 and later) with the plugins that work on
+# Debian. Left out: updater and power (need Raspberry Pi system tools or
+# hardware) and network (nm-applet shows the same icons in the tray).
+_pi_panel_pkgs() {
+	printf '%s\n' lxpanel-pi lpplug-menu lpplug-volumepulse lpplug-bluetooth lpplug-magnifier \
+		lpplug-ejecter pplug-ejecter-data lpplug-clock lpplug-batt
+}
+
 # Debian packages the themes need; the builder adds their missing dependencies.
 _bundle_deb_pkgs() {
-	printf '%s\n' gtk2-engines-pixbuf libgtk2.0-bin gnome-icon-theme sound-theme-freedesktop "$(_mono_font_pkg "$1")"
-	if [[ $1 == trixie ]]; then printf '%s\n' adwaita-icon-theme-legacy; fi
+	printf '%s\n' gtk2-engines-pixbuf libgtk2.0-bin gnome-icon-theme sound-theme-freedesktop "$(_mono_font_pkg "$1")" \
+		network-manager-gnome
+	# blueman only where Debian's panel is used; Raspberry Pi's panel (Debian 13)
+	# has its own Bluetooth plugin
+	if [[ $1 == trixie ]]; then printf '%s\n' adwaita-icon-theme-legacy; else printf '%s\n' blueman; fi
 }
 # Debian package providing Liberation Mono, the Raspberry Pi OS monospace font.
 _mono_font_pkg() { if [[ $1 == bookworm ]]; then echo fonts-liberation2; else echo fonts-liberation; fi; }
@@ -729,7 +757,7 @@ _avail() {
 # (DEP_RENAMES) counts as satisfied by its successor.
 _deps_satisfiable() {
 	local group alt name op ver r v ok
-	local -a groups alts
+	local -a groups alts avs
 	IFS=, read -ra groups <<<"$1"
 	for group in "${groups[@]}"; do
 		[[ -n ${group//[[:space:]]/} ]] || continue
@@ -741,7 +769,8 @@ _deps_satisfiable() {
 			if [[ $alt =~ \(([\<\>=]+)[[:space:]]*([^\)[:space:]]+)\) ]]; then op=${BASH_REMATCH[1]} ver=${BASH_REMATCH[2]}; fi
 			for r in "$name" ${DEP_RENAMES[$name]:-}; do
 				_avail "$r"
-				for v in $AV; do
+				read -ra avs <<<"$AV"   # no glob expansion of "*"
+				for v in "${avs[@]}"; do
 					if [[ -z $op || $v == "*" ]] || _vcmp "$v" "$op" "$ver"; then ok=1; break 3; fi
 				done
 			done
@@ -762,7 +791,7 @@ _deps_satisfiable() {
 # Offline, the local repository is the only source and is used as built.
 # Usage: resolve_pkg PACKAGE [ARCHIVE]
 resolve_pkg() {
-	local pkg=$1 aid=${2:-rpi} s x line best="" skipped="" v a f sha z d
+	local pkg=$1 aid=${2:-rpi} s x line best="" best_v="" skipped="" v a f sha z d
 	[[ -n $O_REPO && $O_ACTION != update-packages ]] && aid=local
 	local -a newer=() older=()
 	if [[ $aid == rpi ]]; then
@@ -786,7 +815,8 @@ resolve_pkg() {
 				[[ -n $skipped ]] || skipped=$v
 				continue
 			fi
-			if [[ -z $best ]] || dpkg --compare-versions "$v" gt "${best%%$'\t'*}"; then best="$line"$'\t'"${x%/*}"; fi
+			# The release goes first: read merges empty tab-separated fields (depends)
+			if [[ -z $best_v ]] || dpkg --compare-versions "$v" gt "$best_v"; then best="${x%/*}"$'\t'"$line" best_v=$v; fi
 			break
 		done < <(index_candidates "$aid" "${x%/*}" "${x#*/}" "$pkg")
 	done
@@ -794,7 +824,7 @@ resolve_pkg() {
 		[[ -n $skipped ]] && warn "$pkg $skipped needs packages that Debian does not provide; no compatible version found"
 		return 1
 	fi
-	IFS=$'\t' read -r v a f sha z d s <<<"$best"
+	IFS=$'\t' read -r s v a f sha z d <<<"$best"
 	if [[ -n $skipped ]] && dpkg --compare-versions "$skipped" gt "$v"; then
 		warn "$pkg $skipped needs packages that Debian does not provide; using $v"
 	fi
@@ -833,9 +863,10 @@ download_pkg() {
 #   BASE=priority  also start from the Debian base system (priority required,
 #                  important and standard)
 #   INSTALLED=1    skip dependencies that installed packages already satisfy
+#   HAVE=FILE      skip dependencies satisfied by the names in FILE
 # Usage: _closure INDEX [ROOT]...
 _closure() {
-	local idx=$1 inst=/dev/null; shift
+	local idx=$1 inst=${HAVE:-/dev/null}; shift
 	if [[ ${INSTALLED:-} == 1 ]]; then
 		inst=$WORKDIR/installed-names
 		dpkg-query -W -f='${db:Status-Abbrev} ${Package} ${Provides}\n' 2>/dev/null \
@@ -1165,22 +1196,84 @@ _cursor_aliases() {
 	debug "$base: $(find "$outcur" -type l | wc -l) cursor aliases (pass $pass)"
 }
 
-# Create the "<Base>-Debian" icon theme, which inherits the official one.
+# Link the icon names Debian's applets request to the official images, at
+# every size the base theme has. Names the base theme already has are kept,
+# unless marked with "!".
+# Usage: _icon_aliases BASE-DIR OUT-DIR BASE-NAME
+_icon_aliases() {
+	local bdir=$1 out=$2 base=$3 entry name target rel f n i force
+	local -a pairs=("${ICON_ALIASES[@]}")
+	local -A have=() imgs=()
+	# nm-applet's connecting animation frames and VPN frames
+	for n in 01 02 03; do for i in $(seq -w 1 11); do pairs+=("nm-stage$n-connecting$i:network-idle"); done; done
+	for i in $(seq -w 1 14); do pairs+=("nm-vpn-connecting$i:nm-vpn-active-lock"); done
+	while IFS= read -r rel; do
+		f=${rel##*/}; f=${f%.*}
+		have[$f]=1
+		imgs[$f]+="$rel "
+	done < <(cd "$bdir" && find . -mindepth 3 \( -name '*.png' -o -name '*.svg' \) -printf '%P\n')
+	for entry in "${pairs[@]}"; do
+		name=${entry%%:*} target=${entry#*:} force=0
+		if [[ $name == '!'* ]]; then name=${name#!} force=1; fi
+		[[ -n ${imgs[$target]:-} ]] || continue
+		if [[ -n ${have[$name]:-} ]] && (( ! force )); then continue; fi
+		for rel in ${imgs[$target]}; do
+			mkdir -p "$out/${rel%/*}"
+			ln -sfn "../../../$base/$rel" "$out/${rel%/*}/$name.${rel##*.}"
+		done
+	done
+}
+
+# Show the Debian logo wherever the theme shows the Raspberry Pi logo
+# ("start-here", "distributor-logo"), e.g. on the Raspberry Pi menu button.
+# The images come from Debian's desktop-base, else from debconf.
+# Usage: _logo_aliases OUT-DIR
+_logo_aliases() {
+	local out=$1 f dir size ext n found=0
+	for f in /usr/share/icons/desktop-base/*/emblems/emblem-debian.png \
+		/usr/share/icons/desktop-base/scalable/emblems/emblem-debian.svg; do
+		[[ -f $f ]] || continue
+		size=${f#/usr/share/icons/desktop-base/}; size=${size%%/*}
+		dir=$out/$size/places ext=${f##*.}
+		mkdir -p "$dir"
+		for n in start-here distributor-logo; do ln -sfn "$f" "$dir/$n.$ext"; done
+		found=1
+	done
+	if (( ! found )) && [[ -f /usr/share/pixmaps/debian-logo.png ]]; then
+		mkdir -p "$out/48x48/places"
+		for n in start-here distributor-logo; do ln -sfn /usr/share/pixmaps/debian-logo.png "$out/48x48/places/$n.png"; done
+	fi
+}
+
+# Create the "<Base>-Debian" icon theme, which inherits the official one and
+# adds cursor and icon name aliases.
 # Usage: gen_icon_overlay BASE-NAME OUTPUT-DIR
 gen_icon_overlay() {
-	local base=$1 out=$2 bdir=$SYS_ROOT/usr/share/icons/$1 inh
+	local base=$1 out=$2 bdir=$SYS_ROOT/usr/share/icons/$1 inh d
+	local -a dirs=()
 	mkdir -p "$out"
 	[[ -d $bdir/cursors ]] && _cursor_aliases "$bdir/cursors" "$out/cursors" "$base"
+	_icon_aliases "$bdir" "$out" "$base"
+	_logo_aliases "$out"
+	mapfile -t dirs < <(cd "$out" && find . -mindepth 2 -maxdepth 2 -type d ! -path './cursors*' -printf '%P\n' | sort)
+	debug "$base: icon aliases in ${#dirs[@]} directories"
 	inh=$(sed -n 's/^Inherits[[:space:]]*=[[:space:]]*//p' "$bdir/index.theme" | head -n1)
 	inh=$(tr ',' '\n' <<<"$base,$inh,Adwaita,hicolor" | awk 'NF && !seen[$0]++' | paste -sd, -)
-	cat >"$out/index.theme" <<EOF
-[Icon Theme]
-Name=$base (Debian)
-Comment=Raspberry Pi OS $base icons and cursors with Debian compatibility names
-Inherits=$inh
-Example=folder
-Directories=
-EOF
+	{
+		printf '[Icon Theme]\nName=%s (Debian)\n' "$base"
+		printf 'Comment=Raspberry Pi OS %s icons and cursors with Debian compatibility names\n' "$base"
+		printf 'Inherits=%s\nExample=folder\nDirectories=%s\n' "$inh" "$(IFS=,; echo "${dirs[*]}")"
+		for d in "${dirs[@]}"; do   # each directory's section: the official theme's, or a new one
+			printf '\n'
+			if grep -qxF "[$d]" "$bdir/index.theme"; then
+				D="[$d]" awk '$0 == ENVIRON["D"] { p = 1; print; next } /^\[/ { p = 0 } p && NF' "$bdir/index.theme"
+			elif [[ $d == scalable/* ]]; then
+				printf '[%s]\nContext=Places\nSize=48\nMinSize=8\nMaxSize=512\nType=Scalable\n' "$d"
+			else
+				printf '[%s]\nContext=Places\nSize=%s\nType=Fixed\n' "$d" "${d%%x*}"
+			fi
+		done
+	} >"$out/index.theme"
 }
 
 # ---------------------------------------------------------------------------
@@ -1221,14 +1314,20 @@ build_local_pkg() {
 		icons+=("$b-Debian")
 	done
 	if (( O_LIGHTDM )) && [[ -n ${T_GTK:-} ]]; then
-		local wall; wall=$(_wallpaper_path)
+		# The Raspberry Pi OS login screen (pi-greeter.conf) with Debian's GTK
+		# greeter: a centred login box on the Pi background colour, the theme,
+		# icons and font, and the Debian logo as the default user picture.
+		local logo
+		logo=$(_greeter_logo || true)
 		mkdir -p "$stage/usr/share/lightdm/lightdm-gtk-greeter.conf.d"
 		{
-			printf '# Installed by %s: Raspberry Pi OS look for the LightDM GTK greeter\n[greeter]\n' "$APP_NAME"
+			printf '# Installed by %s: the Raspberry Pi OS login screen style\n[greeter]\n' "$APP_NAME"
 			printf 'theme-name=%s\nicon-theme-name=%s-Debian\ncursor-theme-name=%s-Debian\ncursor-theme-size=%s\n' \
 				"$T_GTK" "$T_ICON_BASE" "$T_ICON_BASE" "$T_CURSOR_SIZE"
 			if [[ -n $T_FONT ]]; then printf 'font-name=%s\n' "$T_FONT"; fi
-			if [[ -n $wall ]]; then printf 'background=%s\n' "$wall"; fi
+			printf 'xft-antialias=true\nxft-hintstyle=hintfull\nxft-rgba=rgb\n'
+			printf 'background=#d6d3de\nuser-background=false\nposition=50%%,center 50%%,center\nindicators=~spacer\n'
+			if [[ -n $logo ]]; then printf 'default-user-image=%s\n' "$logo"; fi
 		} >"$stage/usr/share/lightdm/lightdm-gtk-greeter.conf.d/60_$APP_NAME.conf"
 	fi
 
@@ -1313,7 +1412,12 @@ resolve_all() {
 			rpd-wallpaper*)    (( walls && ! O_4K )) || continue ;;
 		esac
 		wanted+=("$p")
-	done < <(_bundle_rpi_pkgs "$H_SUITE")
+	done < <(_bundle_rpi_pkgs "$H_SUITE" | grep -vxF -f <(_pi_panel_pkgs))
+	# Raspberry Pi's own panel, on Debian 13 and later where Debian's LXDE panel
+	# is installed (it replaces that panel in the LXDE session)
+	if (( O_PANEL && $(_suite_rank "$H_SUITE") >= 3 )) && [[ -n $(_installed_version lxpanel) ]]; then
+		mapfile -t -O "${#wanted[@]}" wanted < <(_pi_panel_pkgs)
+	fi
 	if [[ -n $O_ONLY && " ${wanted[*]} " != *" $(_theme_pkg "$O_ONLY") "* ]]; then
 		die "$O_ONLY is not available for Debian $H_SUITE (PiXtrix and PiXonyx need Debian 13)"
 	fi
@@ -1348,6 +1452,15 @@ resolve_all() {
 	[[ " ${FETCH_PKGS[*]} " == *" rpd-icons "* ]] && helpers+=(gnome-icon-theme)
 	[[ " ${FETCH_PKGS[*]} " == *" pixtrix-icons "* ]] && helpers+=(adwaita-icon-theme-legacy)
 	(( O_QT )) && helpers+=(qt5-gtk-platformtheme qt6-gtk-platformtheme)
+	# Tray applets the LXDE panel needs, only where the service they control is
+	# already installed, so network and Bluetooth management stay unchanged:
+	# nm-applet for the network icon (neither panel has a network plugin that
+	# works on Debian), and blueman for Bluetooth unless Raspberry Pi's panel,
+	# which has its own Bluetooth plugin, is used.
+	if (( O_PANEL )) && [[ " ${DESKTOPS[*]} " == *" lxde "* ]]; then
+		[[ -n $(_installed_version network-manager) ]] && helpers+=(network-manager-gnome)
+		if [[ -n $(_installed_version bluez) && " ${FETCH_PKGS[*]} " != *" lxpanel-pi "* ]]; then helpers+=(blueman); fi
+	fi
 	APT_PKGS=()
 	for p in "${helpers[@]}"; do
 		[[ " ${APT_PKGS[*]} " == *" $p "* || -n $(_installed_version "$p") ]] && continue
@@ -1423,7 +1536,7 @@ _record_installed() {
 	for p; do
 		(( O_DRY_RUN )) || [[ -n $(_installed_version "$p") ]] || continue
 		newly+=("$p")
-		case $p in gtk2-engines-*|libgtk2.0-*|libgdk-pixbuf*|gnome-icon-theme|adwaita-icon-theme*|fonts-liberation*|sound-theme-*) autos+=("$p") ;; esac
+		case $p in gtk2-engines-*|libgtk2.0-*|libgdk-pixbuf*|gnome-icon-theme|adwaita-icon-theme*|fonts-liberation*|sound-theme-*|lpplug-*|pplug-*) autos+=("$p") ;; esac
 	done
 	(( ${#newly[@]} )) || return 0
 	if (( ${#autos[@]} )); then as_root apt-mark auto "${autos[@]}" >/dev/null; fi
@@ -1504,7 +1617,9 @@ install_all() {
 		[[ -n $(_installed_version "$p") ]] || before+=("$p")
 	done
 	if [[ -n $O_REPO ]]; then
-		opts+=(--no-download -o "Dir::Cache::archives=$WORKDIR/archives/")
+		# Offline: only what is needed, never downloads (recommended packages
+		# outside ./packages would otherwise be fetched from the APT sources)
+		opts+=(--no-download --no-install-recommends -o "Dir::Cache::archives=$WORKDIR/archives/")
 		_prime_apt_cache "${files[@]}"
 	fi
 
@@ -1546,12 +1661,13 @@ install_local_pkg() {
 _pkg_category() {
 	case $1 in
 		sound-theme-*)               echo sounds ;;
+		lxpanel-pi|lpplug-*|pplug-*|network-manager-gnome|blueman) echo panel ;;
 		*icon-theme*|*-icons)        echo icons ;;
 		*-theme)                     echo themes ;;
 		fonts-*)                     echo fonts ;;
 		gtk2-engines-*|libgtk2.0-*|libgdk-pixbuf*) echo engines ;;   # GTK 2 engines and runtime
 		*wallpaper*)                 echo wallpapers ;;
-		*)                           echo other ;;
+		*)                           echo dependencies ;;
 	esac
 }
 
@@ -1637,7 +1753,7 @@ _stage_pkg() {
 # need that a standard Debian desktop lacks. The result replaces ./packages
 # only when complete.
 build_offline_repo() {
-	local dest=$O_REPO stage suite arch p f e idx deb base gtk3 i n=0
+	local dest=$O_REPO stage suite arch p f e idx deb base gtk3 audio i n=0
 	local -a rpis debs got roots
 	preflight_tools
 	[[ -r $DEBIAN_KEYRING ]] || die "$DEBIAN_KEYRING is missing (install debian-archive-keyring)"
@@ -1684,13 +1800,22 @@ build_offline_repo() {
 				done
 			done
 			# Debian packages: the dependency closure of everything bundled, minus
-			# what every Debian desktop has (base system plus the GTK 3 runtime)
-			gtk3=libgtk-3-0t64
-			[[ $suite == bookworm ]] && gtk3=libgtk-3-0
+			# what a Debian desktop already has: the base system, the GTK 3
+			# runtime, the LXDE desktop and its audio server, and NetworkManager
+			# and BlueZ (the tray applets are only installed where these are).
+			gtk3=libgtk-3-0t64 audio=pipewire-pulse
+			[[ $suite == bookworm ]] && gtk3=libgtk-3-0 audio=pulseaudio
 			base=$deb.base
-			BASE=priority _closure "$deb" "$gtk3" librsvg2-common hicolor-icon-theme >"$base"
+			BASE=priority _closure "$deb" "$gtk3" librsvg2-common hicolor-icon-theme \
+				lxde-core "$audio" network-manager bluez >"$base"
+			# The baseline's names and what they provide satisfy any alternative
+			awk 'NR == FNR { b[$1] = 1; next }
+				/^Package: / { p = $2 } /^Provides: / && (p in b) {
+					sub(/^Provides: /, ""); n = split($0, a, ",")
+					for (i = 1; i <= n; i++) { x = a[i]; sub(/^[ \t]+/, "", x); sub(/[ \t(].*/, "", x); print x }
+				}' "$base" "$deb" | cat - "$base" | sort -u >"$base.have"
 			mapfile -t roots < <(_deb_depnames "${got[@]}")
-			mapfile -t debs < <(_closure "$deb" "${debs[@]}" "${roots[@]}" | grep -vxF -f "$base" \
+			mapfile -t debs < <(HAVE=$base.have _closure "$deb" "${debs[@]}" "${roots[@]}" | grep -vxF -f "$base" \
 				| while read -r p; do [[ " ${rpis[*]} " == *" $p "* ]] || echo "$p"; done)
 			for p in "${debs[@]}"; do
 				resolve_pkg "$p" debian || die "$p is not available in Debian $suite/$arch"
@@ -1751,6 +1876,15 @@ _track_file() {
 		_missing_dirs "$(dirname "$path")" >>"$A_STATE/created-dirs"
 	fi
 	printf 'file:%s\n' "$rel" >>"$A_STATE/keys"
+}
+
+# Succeed only the first time a one-time step runs for this user, so later
+# runs (updates, look changes) keep the user's own changes to what it set up.
+# Usage: _once STEP
+_once() {
+	(( O_DRY_RUN )) && return 0
+	grep -qxF "once:$1" "$A_STATE/keys" && return 1
+	printf 'once:%s\n' "$1" >>"$A_STATE/keys"
 }
 
 # Record, once per setting, the command that restores its original value.
@@ -1852,62 +1986,269 @@ _seed() {
 	return 1
 }
 
-# Set the theme, fonts and title layout in the <theme> section of an Openbox or
-# labwc rc.xml. Openbox knows only Normal and Bold weights. labwc applies a
-# <font> without place= everywhere, so one is added if none exists.
-# Usage: _rc_theme FILE THEME [TITLE-LAYOUT]
-_rc_theme() {
-	local file=$1 theme=$2 layout=${3:-} weight=$T_FONT_WEIGHT add_font=0
-	if [[ $file == */openbox/* ]]; then [[ $weight == Bold ]] || weight=Normal; else add_font=1; fi
-	if (( O_DRY_RUN )); then log "   [dry-run] $file: theme=$theme font='${T_FONT_FAMILY:-unchanged}'"; return 0; fi
-	_track_file "$file"
-	if ! grep -q '<theme>' "$file"; then
-		sed -i "s#</\(labwc\|openbox\)_config>#  <theme>\n    <name>$theme</name>\n  </theme>\n&#" "$file"
-	fi
-	TH=$theme FA=$T_FONT_FAMILY WE=$weight LA=$layout AF=$add_font awk '
-		BEGIN { th = ENVIRON["TH"]; fa = ENVIRON["FA"]; we = ENVIRON["WE"]; la = ENVIRON["LA"] }
-		/<theme>/ { in_t = 1 }
-		in_t && /<font[ >]/ { in_f = 1; fonts = 1 }
-		in_t && !in_f && !named && /<name>.*<\/name>/ { sub(/<name>.*<\/name>/, "<name>" th "</name>"); named = 1 }
-		in_t && in_f && fa != "" && /<name>.*<\/name>/ { sub(/<name>.*<\/name>/, "<name>" fa "</name>") }
-		in_t && in_f && fa != "" && /<size>.*<\/size>/ { sub(/<size>.*<\/size>/, "<size>12</size>") }
-		in_t && in_f && fa != "" && /<weight>.*<\/weight>/ { sub(/<weight>.*<\/weight>/, "<weight>" we "</weight>") }
-		in_t && la != "" && /<titleLayout>.*<\/titleLayout>/ { sub(/<titleLayout>.*<\/titleLayout>/, "<titleLayout>" la "</titleLayout>") }
-		in_f && /<\/font>/ { in_f = 0 }
-		/<\/theme>/ {
-			if (in_t && !named) { print "    <name>" th "</name>"; named = 1 }
-			if (in_t && !fonts && fa != "" && ENVIRON["AF"] == 1)
-				print "    <font><name>" fa "</name><size>12</size><weight>" we "</weight></font>"
-			in_t = 0
-		}
-		{ print }' "$file" | _write "$file"
+# Replace the first <TAG>…</TAG> element of an Openbox or labwc rc.xml with
+# CONTENT, or add CONTENT before the closing root tag if there is none.
+# Usage: _xml_block FILE TAG CONTENT
+_xml_block() {
+	T=$2 C=$3 awk '
+		BEGIN { t = ENVIRON["T"] }
+		!done && $0 ~ "<" t "[ >]" { skip = 1 }
+		skip { if ($0 ~ "</" t ">") { print ENVIRON["C"]; skip = 0; done = 1 }; next }
+		!done && /<\/(openbox|labwc)_config>/ { print ENVIRON["C"]; done = 1 }
+		{ print }' "$1" | _write "$1"
 }
 
-# Apply the Raspberry Pi OS panel layout (from rpd-x-core) and the Debian logo
-# menu button to a Debian lxpanel profile. Plugins are kept. The panel uses the
-# GTK theme's colours (background=0, usefontcolor=0), as in Raspberry Pi OS.
-_lxpanel_set() {
-	local file=$1
-	if (( O_DRY_RUN )); then log "   [dry-run] $file: top, 36 px, menu button ${A_LOGO:-unchanged}"; return 0; fi
+# Set <CHILD>VALUE</CHILD> inside the <PARENT> element, adding it if missing.
+# Usage: _xml_child FILE PARENT CHILD VALUE
+_xml_child() {
+	P=$2 C=$3 V=$4 awk '
+		BEGIN { p = ENVIRON["P"]; c = ENVIRON["C"]; el = "<" c ">" ENVIRON["V"] "</" c ">" }
+		$0 ~ "<" p ">" { in_p = 1 }
+		in_p && !done && $0 ~ "<" c ">.*</" c ">" { sub("<" c ">.*</" c ">", el); done = 1 }
+		in_p && !done && $0 ~ "</" p ">" { match($0, /^[ \t]*/); print substr($0, 1, RLENGTH) "  " el; done = 1 }
+		$0 ~ "</" p ">" { in_p = 0 }
+		{ print }' "$1" | _write "$1"
+}
+
+# Print <font> elements for the given places, as Raspberry Pi OS sets them
+# (theme font, size 12). With --no-font, the file's current fonts are kept.
+# Usage: _xml_fonts FILE PLACE...
+_xml_fonts() {
+	local file=$1 p; shift
+	if [[ -z $T_FONT_FAMILY ]]; then
+		sed -n '/<theme>/,/<\/theme>/{/<font/,/<\/font>/p}' "$file"
+		return 0
+	fi
+	for p; do
+		printf '    <font place="%s">\n      <name>%s</name>\n      <size>12</size>\n      <weight>%s</weight>\n      <slant>Normal</slant>\n    </font>\n' \
+			"$p" "$T_FONT_FAMILY" "$T_FONT_WEIGHT"
+	done
+}
+
+# Apply the Raspberry Pi OS Openbox settings (lxde-pi-rc.xml / rpd-rc.xml):
+# the <theme> section with round corners and invisible handles, and, unless
+# THEME-ONLY is set, one desktop and the focus and placement settings.
+# Usage: _openbox_rc FILE [THEME-ONLY]
+_openbox_rc() {
+	local file=$1 theme_only=${2:-0} fonts
+	if (( O_DRY_RUN )); then log "   [dry-run] $file: Raspberry Pi OS Openbox settings, theme $T_WM"; return 0; fi
 	_track_file "$file"
-	KV=$'edge=top\nalign=left\nmargin=0\nwidthtype=percent\nwidth=100\nheight=36\niconsize=36\ntransparent=0\nbackground=0\nusefontcolor=0' \
-	IMG=$A_LOGO awk '
-		function key(line) { sub(/^[ \t]*/, "", line); sub(/[ \t]*=.*/, "", line); return line }
-		BEGIN { n = split(ENVIRON["KV"], kv, "\n"); for (i = 1; i <= n; i++) { split(kv[i], p, "="); val[p[1]] = p[2]; ord[i] = p[1] } }
-		/^Global[ \t]*\{/ { g = 1; ind = "    "; print; next }
-		g && /^[ \t]*\}/ {
-			for (i = 1; i <= n; i++) if (!(ord[i] in done)) print ind ord[i] "=" val[ord[i]]
-			g = 0
-		}
-		g && /=/ {
-			match($0, /^[ \t]*/); ind = substr($0, 1, RLENGTH); k = key($0)
-			if (k in val) { print ind k "=" val[k]; done[k] = 1; next }
-		}
-		/^[ \t]*type[ \t]*=[ \t]*menu[ \t]*$/ { m = 1 }
-		m && ENVIRON["IMG"] != "" && key($0) == "image" {
-			match($0, /^[ \t]*/); print substr($0, 1, RLENGTH) "image=" ENVIRON["IMG"]; m = 0; next
-		}
-		{ print }' "$file" | _write "$file"
+	fonts=$(_xml_fonts "$file" ActiveWindow InactiveWindow MenuHeader MenuItem ActiveOnScreenDisplay InactiveOnScreenDisplay)
+	_xml_block "$file" theme "$(printf '  <theme>\n    <name>%s</name>\n    <titleLayout>LIMC</titleLayout>\n    <keepBorder>yes</keepBorder>\n    <roundCorners>yes</roundCorners>\n    <invisibleHandles>yes</invisibleHandles>\n    <animateIconify>yes</animateIconify>\n%s\n  </theme>' "$T_WM" "$fonts")"
+	(( theme_only )) && return 0
+	_xml_child "$file" desktops number 1
+	_xml_child "$file" focus focusDesktop yes
+	_xml_child "$file" placement monitor Any
+}
+
+# Apply the Raspberry Pi OS labwc look (rpd-wayland-core rc.xml): the <theme>
+# section, window snapping and the window switcher.
+_labwc_rc() {
+	local file=$1 fonts
+	if (( O_DRY_RUN )); then log "   [dry-run] $file: Raspberry Pi OS labwc settings, theme $T_WM"; return 0; fi
+	_track_file "$file"
+	fonts=$(_xml_fonts "$file" ActiveWindow InactiveWindow OnScreenDisplay MenuItem)
+	_xml_block "$file" theme "$(printf '  <theme>\n    <name>%s</name>\n    <cornerRadius>0</cornerRadius>\n    <keepBorder>yes</keepBorder>\n%s\n    <dropShadows>yes</dropShadows>\n    <titlebar>\n      <layout>:iconify,max,close</layout>\n    </titlebar>\n  </theme>' "$T_WM" "$fonts")"
+	# Window snapping and the window switcher, as in Raspberry Pi OS
+	_xml_block "$file" snapping '  <snapping>
+    <range>0</range>
+    <topMaximize>no</topMaximize>
+  </snapping>'
+	_xml_block "$file" windowSwitcher '  <windowSwitcher show="yes" preview="yes" outlines="yes" allWorkspaces="no">
+    <fields>
+      <field content="icon" width="5%" />
+      <field content="title" width="95%" />
+    </fields>
+  </windowSwitcher>'
+}
+
+# Print the first installed application launcher (.desktop file) of a list.
+_launcher() {
+	local id
+	for id; do
+		if [[ -f /usr/share/applications/$id ]]; then printf '%s\n' "$id"; return 0; fi
+	done
+	return 1
+}
+
+# Write the Raspberry Pi OS panel (raspberrypi-ui-mods / rpd-x-core) with
+# Debian's lxpanel plugins: the same geometry and colours, menu with the
+# Debian logo, launchers for browser, file manager and terminal, taskbar,
+# tray, volume, clock and battery. Pi-only plugins have no Debian counterpart;
+# network and Bluetooth appear in the tray through Debian's applets.
+_lxpanel_write() {
+	local file=$1 id plugins='/usr/lib/*/lxpanel/plugins'
+	local -a launchers=()
+	if (( O_DRY_RUN )); then log "   [dry-run] $file: Raspberry Pi OS panel layout"; return 0; fi
+	_track_file "$file"
+	for id in "$(_launcher lxde-x-www-browser.desktop x-www-browser.desktop firefox-esr.desktop chromium.desktop)" \
+		"$(_launcher pcmanfm.desktop)" "$(_launcher lxterminal.desktop lxde-x-terminal-emulator.desktop)"; do
+		if [[ -n $id ]]; then launchers+=("$id"); fi
+	done
+	{
+		printf '# lxpanel <profile> config file. Manually editing is not recommended.\n'
+		printf '# Use preference dialog in lxpanel to adjust config when you can.\n\n'
+		printf 'Global {\n'
+		printf '  %s\n' edge=top align=left margin=0 widthtype=percent width=100 height=36 transparent=0 \
+			tintcolor=#000000 alpha=0 autohide=0 heightwhenhidden=2 setdocktype=1 setpartialstrut=1 \
+			usefontcolor=0 fontsize=12 fontcolor=#ffffff usefontsize=0 background=0 \
+			backgroundfile=/usr/share/lxpanel/images/background.png iconsize=36 monitor=0 point_at_menu=0
+		printf '}\n'
+		printf 'Plugin {\n  type=menu\n  Config {\n    image=%s\n' "${A_LOGO:-start-here}"
+		printf '    system {\n    }\n    separator {\n    }\n    item {\n      image=system-run\n      command=run\n    }\n'
+		printf '    separator {\n    }\n    item {\n      image=system-shutdown\n      command=logout\n    }\n  }\n}\n'
+		[[ $T_ERA == trixie ]] && printf 'Plugin {\n  type=separator\n  Config {\n  }\n}\n'
+		printf 'Plugin {\n  type=space\n  Config {\n    Size=4\n  }\n}\n'
+		printf 'Plugin {\n  type=launchbar\n  Config {\n'
+		for id in "${launchers[@]}"; do printf '    Button {\n      id=%s\n    }\n' "$id"; done
+		printf '  }\n}\n'
+		printf 'Plugin {\n  type=space\n  Config {\n    Size=8\n  }\n}\n'
+		printf 'Plugin {\n  type=taskbar\n  expand=1\n  Config {\n'
+		printf '    %s\n' tooltips=1 IconsOnly=0 ShowAllDesks=0 UseMouseWheel=1 UseUrgencyHint=1 FlatButton=0 \
+			MaxTaskWidth=200 spacing=1 GroupedTasks=0
+		printf '  }\n}\n'
+		printf 'Plugin {\n  type=space\n  Config {\n    Size=2\n  }\n}\n'
+		printf 'Plugin {\n  type=tray\n  Config {\n  }\n}\n'
+		if compgen -G "$plugins/volume.so" >/dev/null; then
+			printf 'Plugin {\n  type=space\n  Config {\n    Size=2\n  }\n}\n'
+			printf 'Plugin {\n  type=volume\n  Config {\n  }\n}\n'
+		fi
+		printf 'Plugin {\n  type=space\n  Config {\n    Size=2\n  }\n}\n'
+		printf 'Plugin {\n  type=dclock\n  Config {\n'
+		printf '    %s\n' ClockFmt=%R 'TooltipFmt=%A %x' BoldFont=0 IconOnly=0 CenterText=1
+		printf '  }\n}\n'
+		if compgen -G "$plugins/batt.so" >/dev/null; then
+			printf 'Plugin {\n  type=space\n  Config {\n    Size=2\n  }\n}\n'
+			printf 'Plugin {\n  type=batt\n  Config {\n    HideIfNoBattery=1\n  }\n}\n'
+		fi
+	} | _write "$file"
+}
+
+# Write the Raspberry Pi OS 13 panel (rpd-x-core) for Raspberry Pi's own panel
+# program, without the plugins that do not work on Debian (updater, power,
+# network; nm-applet shows the network icons in the tray).
+_pi_panel_write() {
+	local file=$1 id p
+	local -a launchers=()
+	if (( O_DRY_RUN )); then log "   [dry-run] $file: Raspberry Pi OS panel (lxpanel-pi)"; return 0; fi
+	_track_file "$file"
+	for id in "$(_launcher x-www-browser.desktop lxde-x-www-browser.desktop firefox-esr.desktop chromium.desktop)" \
+		"$(_launcher pcmanfm.desktop)" "$(_launcher x-terminal-emulator.desktop lxterminal.desktop lxde-x-terminal-emulator.desktop)"; do
+		if [[ -n $id ]]; then launchers+=("$id"); fi
+	done
+	{
+		printf 'Global {\n'
+		printf '  %s\n' edge=top align=left margin=0 widthtype=percent width=100 height=36 transparent=0 \
+			tintcolor=#000000 alpha=0 autohide=0 heightwhenhidden=2 setdocktype=1 setpartialstrut=1 \
+			usefontcolor=0 fontsize=12 fontcolor=#ffffff usefontsize=0 background=0 \
+			backgroundfile=/usr/share/lxpanel/images/background.png iconsize=36 monitor=0
+		printf '}\n'
+		printf 'Plugin {\n  type=%s\n  Config {\n  }\n}\n' smenu separator
+		printf 'Plugin {\n  type=space\n  Config {\n    Size=4\n  }\n}\n'
+		printf 'Plugin {\n  type=launchbar\n  Config {\n'
+		for id in "${launchers[@]}"; do printf '    Button {\n      id=%s\n    }\n' "$id"; done
+		printf '  }\n}\n'
+		printf 'Plugin {\n  type=space\n  Config {\n    Size=8\n  }\n}\n'
+		printf 'Plugin {\n  type=taskbar\n  expand=1\n  Config {\n'
+		printf '    %s\n' tooltips=1 IconsOnly=0 ShowAllDesks=0 UseMouseWheel=1 UseUrgencyHint=1 FlatButton=0 \
+			MaxTaskWidth=200 spacing=1 GroupedTasks=0
+		printf '  }\n}\n'
+		printf 'Plugin {\n  type=space\n  Config {\n    Size=2\n  }\n}\n'
+		printf 'Plugin {\n  type=%s\n  Config {\n  }\n}\n' tray ejecter
+		for p in bluetooth volumepulse clock batt magnifier; do
+			printf 'Plugin {\n  type=space\n  Config {\n    Size=2\n  }\n}\n'
+			printf 'Plugin {\n  type=%s\n  Config {\n  }\n}\n' "$p"
+		done
+	} | _write "$file"
+}
+
+# Keep only the Raspberry Pi OS set of notification icons in the LXDE panel:
+# hide, for this user, the autostarted tray applets whose job a Raspberry Pi
+# plugin does (volume; Bluetooth when Raspberry Pi's panel is used). They stay
+# installed; the standard "Hidden=true" autostart override is used.
+_hide_extra_applets() {
+	local f id
+	local -a pats=(volumeicon pasystray pnmixer)
+	(( O_PI_PANEL )) && pats+=(blueman)
+	for id in "${pats[@]}"; do
+		for f in /etc/xdg/autostart/"$id"*.desktop; do
+			[[ -f $f ]] || continue
+			f=$HOME/.config/autostart/${f##*/}
+			[[ -f $f ]] && continue   # the user's own autostart choice
+			if (( O_DRY_RUN )); then log "   [dry-run] hide tray applet ${f##*/}"; continue; fi
+			_track_file "$f"
+			printf '[Desktop Entry]\nType=Application\nName=%s\nHidden=true\n' "${f##*/}" | _write "$f"
+		done
+	done
+}
+
+# Start the given panel program in the LXDE session instead of the current one.
+# Usage: _lxsession_panel SESSION PROGRAM
+_lxsession_panel() {
+	local file=$HOME/.config/lxsession/$1/autostart
+	_seed "$file" "/etc/xdg/lxsession/$1/autostart" /etc/xdg/lxsession/LXDE/autostart || true
+	if (( O_DRY_RUN )); then log "   [dry-run] $file: start $2"; return 0; fi
+	_track_file "$file"
+	{ [[ -f $file ]] && cat -- "$file"; true; } | P=$2 awk '
+		/^@?lxpanel(-pi)?([ \t]|$)/ { if (!done) print "@" ENVIRON["P"]; done = 1; next }
+		{ print }
+		END { if (!done) print "@" ENVIRON["P"] }' | _write "$file"
+}
+
+# Write the Raspberry Pi OS application menu for LXDE: its category order,
+# names and icons, with separators before Help and Preferences. Category
+# names that match Debian's (lxmenu-data) keep Debian's translations.
+_lxde_menu_write() {
+	local ddir=$HOME/.local/share/desktop-directories menu=$HOME/.config/menus/lxde-applications.menu
+	local entry id name icon cat deb f
+	local -a cats=(
+		"development|Programming|applications-development|Development|lxde-development"
+		"education|Education|applications-engineering|Education|lxde-education"
+		"science|Science|applications-science|Science|lxde-science"
+		"office|Office|applications-office|Office|lxde-office"
+		"network|Internet|applications-internet|Network|lxde-network"
+		"audio-video|Sound & Video|applications-multimedia|AudioVideo|lxde-audio-video"
+		"graphics|Graphics|applications-graphics|Graphics|lxde-graphics"
+		"game|Games|applications-games|Game|lxde-game"
+		"other|Other|applications-other||lxde-other"
+		"system-tools|System Tools|applications-system|System|lxde-system"
+		"utility|Accessories|applications-accessories|Utility|lxde-utility"
+		"help|Help|gnome-help|Help|"
+		"settings|Preferences|preferences-desktop|Settings|lxde-settings"
+	)
+	if (( O_DRY_RUN )); then log "   [dry-run] $menu: Raspberry Pi OS menu layout"; return 0; fi
+	_track_file "$menu"
+	{
+		printf '<?xml version="1.0"?>\n<!DOCTYPE Menu PUBLIC "-//freedesktop//DTD Menu 1.0//EN"\n'
+		printf ' "http://www.freedesktop.org/standards/menu-spec/menu-1.0.dtd">\n'
+		printf '<!-- %s: the Raspberry Pi OS application menu -->\n<Menu>\n  <Name>Applications</Name>\n' "$APP_NAME"
+		printf '  <Directory>lxde-menu-applications.directory</Directory>\n  <DefaultAppDirs/>\n  <DefaultDirectoryDirs/>\n  <DefaultMergeDirs/>\n'
+		for entry in "${cats[@]}"; do
+			IFS='|' read -r id name icon cat deb <<<"$entry"
+			printf '  <Menu>\n    <Name>%s</Name>\n    <Directory>%s-%s.directory</Directory>\n' "$id" "$APP_NAME" "$id"
+			if [[ -n $cat ]]; then
+				printf '    <Include>\n      <Category>%s</Category>\n    </Include>\n  </Menu>\n' "$cat"
+			else
+				printf '    <OnlyUnallocated/>\n    <Include>\n      <All/>\n    </Include>\n  </Menu>\n'
+			fi
+		done
+		printf '  <Layout>\n'
+		for id in development education science office network audio-video graphics game other system-tools utility; do
+			printf '    <Menuname>%s</Menuname>\n' "$id"
+		done
+		printf '    <Merge type="menus"/>\n    <Separator/>\n    <Menuname>help</Menuname>\n    <Separator/>\n'
+		printf '    <Menuname>settings</Menuname>\n    <Separator/>\n    <Merge type="files"/>\n  </Layout>\n</Menu>\n'
+	} | _write "$menu"
+	for entry in "${cats[@]}"; do
+		IFS='|' read -r id name icon cat deb <<<"$entry"
+		f=$ddir/$APP_NAME-$id.directory
+		_track_file "$f"
+		{
+			printf '[Desktop Entry]\nType=Directory\nName=%s\nIcon=%s\n' "$name" "$icon"
+			deb=/usr/share/desktop-directories/$deb.directory
+			if [[ -f $deb ]] && [[ $(sed -n 's/^Name=//p' "$deb") == "$name" ]]; then grep '^Name\[' "$deb" || true; fi
+		} | _write "$f"
+	done
 }
 
 # Print the Debian logo for the menu button, from packages every Debian desktop
@@ -1922,6 +2263,17 @@ _logo_path() {
 		if [[ -f $f ]]; then printf '%s\n' "$f"; return 0; fi
 	done
 	return 1
+}
+
+# Print a large Debian logo for the login screen's default user picture.
+_greeter_logo() {
+	local f
+	for f in /usr/share/icons/desktop-base/128x128/emblems/emblem-debian.png \
+		/usr/share/icons/hicolor/128x128/emblems/emblem-debian.png \
+		/usr/share/icons/desktop-base/scalable/emblems/emblem-debian.svg; do
+		if [[ -f $f ]]; then printf '%s\n' "$f"; return 0; fi
+	done
+	_logo_path
 }
 
 # Map Monospace to Liberation Mono, as Raspberry Pi OS does.
@@ -2047,13 +2399,17 @@ _gs_interface() {
 	gs_str "$s" icon-theme "$A_ICONS"
 	gs_str "$s" cursor-theme "$A_CURSOR"
 	gs_set "$s" cursor-size "$T_CURSOR_SIZE"
+	gs_str "$s" font-antialiasing rgba
+	gs_str "$s" font-hinting full
+	gs_str "$s" font-rgba-order rgb
 	if [[ -n $T_FONT ]]; then
 		gs_str "$s" font-name "$T_FONT"
 		gs_str "$s" document-font-name "$T_FONT"
 	fi
 }
 
-# Write the GTK 2, 3 and 4 settings files and the default X11 cursor.
+# Write the GTK 2, 3 and 4 settings files and the default X11 cursor, with the
+# Raspberry Pi OS toolbar, icon size and font rendering settings.
 apply_gtk_files() {
 	local f=$HOME/.config/gtk-3.0/settings.ini
 	_ini_set "$f" Settings gtk-theme-name "$T_GTK" gtk-icon-theme-name "$A_ICONS" \
@@ -2062,9 +2418,13 @@ apply_gtk_files() {
 	if [[ -n $A_SOUND ]]; then
 		_ini_set "$f" Settings gtk-sound-theme-name "$A_SOUND" gtk-enable-event-sounds 1 gtk-enable-input-feedback-sounds 1
 	fi
+	_ini_set "$f" Settings gtk-toolbar-style GTK_TOOLBAR_BOTH_HORIZ gtk-toolbar-icon-size GTK_ICON_SIZE_LARGE_TOOLBAR \
+		gtk-icon-sizes gtk-large-toolbar=24,24 gtk-button-images 0 gtk-menu-images 0 \
+		gtk-xft-antialias 1 gtk-xft-hinting 1 gtk-xft-hintstyle hintfull gtk-xft-rgba rgb
 	f=$HOME/.config/gtk-4.0/settings.ini
 	_ini_set "$f" Settings gtk-icon-theme-name "$A_ICONS" gtk-cursor-theme-name "$A_CURSOR" \
-		gtk-cursor-theme-size "$T_CURSOR_SIZE"
+		gtk-cursor-theme-size "$T_CURSOR_SIZE" \
+		gtk-xft-antialias 1 gtk-xft-hinting 1 gtk-xft-hintstyle hintfull gtk-xft-rgba rgb
 	if [[ -n $T_FONT ]]; then _ini_set "$f" Settings gtk-font-name "$T_FONT"; fi
 	f=$HOME/.gtkrc-2.0
 	_kv_set "$f" gtk-theme-name "$T_GTK" '"'
@@ -2072,19 +2432,33 @@ apply_gtk_files() {
 	_kv_set "$f" gtk-cursor-theme-name "$A_CURSOR" '"'
 	_kv_set "$f" gtk-cursor-theme-size "$T_CURSOR_SIZE"
 	if [[ -n $T_FONT ]]; then _kv_set "$f" gtk-font-name "$T_FONT" '"'; fi
+	_kv_set "$f" gtk-toolbar-style GTK_TOOLBAR_BOTH_HORIZ
+	_kv_set "$f" gtk-toolbar-icon-size GTK_ICON_SIZE_LARGE_TOOLBAR
+	_kv_set "$f" gtk-icon-sizes "gtk-large-toolbar=24,24" '"'
+	_kv_set "$f" gtk-button-images 0
+	_kv_set "$f" gtk-menu-images 0
+	_kv_set "$f" gtk-xft-antialias 1
+	_kv_set "$f" gtk-xft-hinting 1
+	_kv_set "$f" gtk-xft-hintstyle hintfull '"'
+	_kv_set "$f" gtk-xft-rgba rgb '"'
 	# Default X11 cursor for applications that do not use XSETTINGS
 	_ini_set "$HOME/.icons/default/index.theme" "Icon Theme" Inherits "$A_CURSOR"
 	ok "GTK 2/3/4 configuration files updated"
 }
 
-# LXDE: lxsession, Openbox, PCManFM desktop and lxpanel.
+# LXDE, as in Raspberry Pi OS: session and GTK settings, Openbox, desktop,
+# file manager and icon sizes, panel and application menu.
 apply_de_lxde() {
 	local sess=LXDE rc f i
 	[[ $S_DESKTOP_SESSION == LXDE* && $S_DESKTOP_SESSION =~ ^[A-Za-z0-9._-]+$ ]] && sess=$S_DESKTOP_SESSION
 	f=$HOME/.config/lxsession/$sess/desktop.conf
 	_seed "$f" "/etc/xdg/lxsession/$sess/desktop.conf" /etc/xdg/lxsession/LXDE/desktop.conf || true
+	# The [GTK] section of the Raspberry Pi OS desktop.conf
 	_ini_set "$f" GTK sNet/ThemeName "$T_GTK" sNet/IconThemeName "$A_ICONS" \
-		sGtk/CursorThemeName "$A_CURSOR" iGtk/CursorThemeSize "$T_CURSOR_SIZE" sGtk/ColorScheme "$T_COLOR_SCHEME"
+		sGtk/CursorThemeName "$A_CURSOR" iGtk/CursorThemeSize "$T_CURSOR_SIZE" sGtk/ColorScheme "$T_COLOR_SCHEME" \
+		iGtk/ToolbarStyle 3 iGtk/ToolbarIconSize 3 sGtk/IconSizes gtk-large-toolbar=24,24 \
+		iGtk/ButtonImages 0 iGtk/MenuImages 0 iGtk/AutoMnemonics 1 iGtk/EnableMnemonics 1 \
+		iXft/Antialias 1 iXft/Hinting 1 sXft/HintStyle hintfull sXft/RGBA rgb
 	if [[ -n $T_FONT ]]; then _ini_set "$f" GTK sGtk/FontName "$T_FONT"; fi
 	if [[ -n $A_SOUND ]]; then
 		_ini_set "$f" GTK sNet/SoundThemeName "$A_SOUND" iNet/EnableEventSounds 1 iNet/EnableInputFeedbackSounds 1
@@ -2092,7 +2466,7 @@ apply_de_lxde() {
 
 	rc=$HOME/.config/openbox/${sess,,}-rc.xml
 	if _seed "$rc" "/etc/xdg/openbox/$sess/rc.xml" /etc/xdg/openbox/LXDE/rc.xml /etc/xdg/openbox/rc.xml; then
-		_rc_theme "$rc" "$T_WM" LIMC
+		_openbox_rc "$rc"
 	else
 		warn "no Openbox configuration found for $sess; window theme not set"
 	fi
@@ -2103,25 +2477,47 @@ apply_de_lxde() {
 	done
 	for i in "${items[@]}"; do
 		_seed "$i" "/etc/xdg/pcmanfm/$sess/$(basename "$i")" "/etc/xdg/pcmanfm/LXDE/$(basename "$i")" || true
-		_ini_set "$i" '*' desktop_bg "$T_DESK_BG" desktop_fg "$T_DESK_FG" desktop_shadow "$T_DESK_SHADOW"
+		_ini_set "$i" '*' desktop_bg "$T_DESK_BG" desktop_fg "$T_DESK_FG" desktop_shadow "$T_DESK_SHADOW" \
+			show_wm_menu 0 sort "mtime;ascending;" show_documents 0 show_trash 1 show_mounts 1
 		if [[ -n $T_FONT ]]; then _ini_set "$i" '*' desktop_font "$T_FONT"; fi
 		if [[ -n $A_WALL ]]; then _ini_set "$i" '*' wallpaper_mode crop wallpaper "$A_WALL"; fi
 	done
-	if (( O_PANEL )); then
-		f=$HOME/.config/lxpanel/$sess/panels/panel
-		if _seed "$f" "/etc/xdg/lxpanel/$sess/panels/panel" /etc/xdg/lxpanel/LXDE/panels/panel; then
-			_lxpanel_set "$f"
+	# File manager (raspberrypi-ui-mods pcmanfm.conf) and icon sizes (libfm.conf)
+	f=$HOME/.config/pcmanfm/$sess/pcmanfm.conf
+	_seed "$f" "/etc/xdg/pcmanfm/$sess/pcmanfm.conf" /etc/xdg/pcmanfm/LXDE/pcmanfm.conf /etc/xdg/pcmanfm/default/pcmanfm.conf || true
+	_ini_set "$f" ui always_show_tabs 0 max_tab_chars 32 win_width 943 win_height 653 splitter_pos 288 \
+		side_pane_mode dirtree view_mode icon show_hidden 0 sort "name;ascending;" columns "name;size;mtime;" \
+		toolbar "newtab;navigation;home;" show_statusbar 1 pathbar_mode_buttons 0
+	f=$HOME/.config/libfm/libfm.conf
+	_seed "$f" /etc/xdg/libfm/libfm.conf || true
+	_ini_set "$f" config cutdown_menus 1 real_expanders 1
+	_ini_set "$f" ui big_icon_size 48 small_icon_size 24 thumbnail_size 80 pane_icon_size 24 show_thumbnail 1
+	_ini_set "$f" places places_home 1 places_desktop 0 places_root 1 places_computer 0 places_trash 0 \
+		places_applications 0 places_network 0 places_unmounted 1 places_volmounts 1
+
+	# Panel, menu and tray: set up on the first installation only, so plugins
+	# and applets the user adds or removes later are kept.
+	if (( O_PANEL )) && _once lxde-panel; then
+		if (( O_PI_PANEL )); then   # Debian 13 and later: Raspberry Pi's own panel
+			_pi_panel_write "$HOME/.config/lxpanel-pi/panels/panel"
+			_lxsession_panel "$sess" lxpanel-pi
 		else
-			warn "no lxpanel configuration found; panel unchanged"
+			_lxpanel_write "$HOME/.config/lxpanel/$sess/panels/panel"
 		fi
+		_lxde_menu_write
+		_hide_extra_applets
 	fi
 	if [[ -n ${DISPLAY:-} ]]; then
 		if _running openbox; then run openbox --reconfigure || true; fi
 		if [[ -n $A_WALL ]] && _running pcmanfm; then run pcmanfm --wallpaper-mode=crop --set-wallpaper="$A_WALL" || true; fi
-		if (( O_PANEL )) && _running lxpanel; then run lxpanelctl restart || true; fi
+		if (( O_PANEL && ! O_PI_PANEL )) && _running lxpanel; then run lxpanelctl restart || true; fi
 	fi
 	ok "LXDE configured (session '$sess')"
-	A_NOTES+=("LXDE: log out and back in to load the new GTK theme, font and cursor.")
+	if (( O_PI_PANEL && O_PANEL )); then
+		A_NOTES+=("LXDE: log out and back in to load the new theme, font, cursor and the Raspberry Pi panel.")
+	else
+		A_NOTES+=("LXDE: log out and back in to load the new theme, font and cursor.")
+	fi
 }
 
 # LXQt: icons, cursor, Openbox and PCManFM-Qt wallpaper.
@@ -2130,7 +2526,7 @@ apply_de_lxqt() {
 	_ini_set "$HOME/.config/lxqt/session.conf" Mouse cursor_theme "$A_CURSOR" cursor_size "$T_CURSOR_SIZE"
 	local rc=$HOME/.config/openbox/lxqt-rc.xml
 	if _seed "$rc" /etc/xdg/openbox/lxqt-rc.xml /usr/share/lxqt/openbox/rc.xml; then
-		_rc_theme "$rc" "$T_WM" LIMC
+		_openbox_rc "$rc" 1
 		if [[ -n ${DISPLAY:-} ]] && _running openbox; then run openbox --reconfigure || true; fi
 	fi
 	if [[ -n $A_WALL ]]; then
@@ -2149,6 +2545,14 @@ apply_de_xfce() {
 	xf_set xsettings /Net/IconThemeName string "$A_ICONS"
 	xf_set xsettings /Gtk/CursorThemeName string "$A_CURSOR"
 	xf_set xsettings /Gtk/CursorThemeSize int "$T_CURSOR_SIZE"
+	xf_set xsettings /Gtk/ToolbarStyle string both-horiz
+	xf_set xsettings /Gtk/IconSizes string gtk-large-toolbar=24,24
+	xf_set xsettings /Gtk/ButtonImages bool false
+	xf_set xsettings /Gtk/MenuImages bool false
+	xf_set xsettings /Xft/Antialias int 1
+	xf_set xsettings /Xft/Hinting int 1
+	xf_set xsettings /Xft/HintStyle string hintfull
+	xf_set xsettings /Xft/RGBA string rgb
 	if [[ -n $T_FONT ]]; then xf_set xsettings /Gtk/FontName string "$T_FONT"; fi
 	if [[ -n $A_SOUND ]]; then
 		xf_set xsettings /Net/SoundThemeName string "$A_SOUND"
@@ -2182,7 +2586,7 @@ XfdesktopIconView.view .label, .xfdesktop-icon-view.view .label { background: #e
 XfdesktopIconView.view .label:active, .xfdesktop-icon-view.view .label:active { background: #87919b; color: white; }'
 	fi
 	_block_set "$HOME/.config/gtk-3.0/gtk.css" "$APP_NAME" "$css"
-	if (( O_PANEL )) && xfconf-query -c xfce4-panel -p /panels/panel-1/size >/dev/null 2>&1; then
+	if (( O_PANEL )) && xfconf-query -c xfce4-panel -p /panels/panel-1/size >/dev/null 2>&1 && _once xfce-panel; then
 		xf_set xfce4-panel /panels/panel-1/position string "p=6;x=0;y=0"   # top, like Raspberry Pi OS
 		xf_set xfce4-panel /panels/panel-1/size uint 36
 		local plug id
@@ -2250,6 +2654,9 @@ apply_de_mate() {
 		gs_set org.mate.sound event-sounds true
 		gs_set org.mate.sound input-feedback-sounds true
 	fi
+	gs_str org.mate.font-rendering antialiasing rgba
+	gs_str org.mate.font-rendering hinting full
+	gs_str org.mate.font-rendering rgba-order rgb
 	gs_str org.mate.peripherals-mouse cursor-theme "$A_CURSOR"
 	gs_set org.mate.peripherals-mouse cursor-size "$T_CURSOR_SIZE"
 	if [[ -n $A_WALL ]]; then
@@ -2264,7 +2671,7 @@ apply_de_mate() {
 apply_de_openbox() {
 	local rc=$HOME/.config/openbox/rc.xml
 	if _seed "$rc" /etc/xdg/openbox/rc.xml; then
-		_rc_theme "$rc" "$T_WM" LIMC
+		_openbox_rc "$rc"
 		if [[ -n ${DISPLAY:-} ]] && _running openbox; then run openbox --reconfigure || true; fi
 		ok "Openbox configured"
 	else
@@ -2279,10 +2686,10 @@ apply_de_labwc() {
 		if (( O_DRY_RUN )); then log "   [dry-run] create $rc"
 		else
 			_track_file "$rc"
-			printf '<?xml version="1.0"?>\n<labwc_config>\n  <theme>\n    <name>%s</name>\n  </theme>\n</labwc_config>\n' "$T_WM" | _write "$rc"
+			printf '<?xml version="1.0"?>\n<labwc_config>\n</labwc_config>\n' | _write "$rc"
 		fi
 	fi
-	_rc_theme "$rc" "$T_WM"
+	_labwc_rc "$rc"
 	_kv_set "$HOME/.config/labwc/environment" XCURSOR_THEME "$A_CURSOR"
 	_kv_set "$HOME/.config/labwc/environment" XCURSOR_SIZE "$T_CURSOR_SIZE"
 	_gs_interface org.gnome.desktop.interface   # GTK reads these on Wayland
@@ -2654,6 +3061,7 @@ main() {
 	# Choose the look now that the themes are installed, then build the
 	# compatibility package (it includes the login screen theme) and apply.
 	local applied=0
+	if [[ -x /usr/bin/lxpanel-pi ]] || { (( O_DRY_RUN )) && [[ " ${FETCH_PKGS[*]} " == *" lxpanel-pi "* ]]; }; then O_PI_PANEL=1; fi
 	if (( O_DO_APPLY )) && choose_look; then applied=1; fi
 	if (( O_DO_INSTALL || (applied && O_LIGHTDM) )); then
 		prepare_root
