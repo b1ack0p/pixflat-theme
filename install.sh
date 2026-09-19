@@ -161,6 +161,7 @@ S_RUNTIME="" S_XDG_DESKTOP="" S_DESKTOP_SESSION=""
 H_ARCH="" H_ID="" H_LIKE="" H_CODENAME="" H_PRETTY="" H_SUITE=""
 DESKTOPS=()
 FETCH_PKGS=()           # installed from verified .deb files
+DEP_PKGS=()             # of those, offline, the ones installed only as dependencies
 APT_PKGS=()             # installed by name from the APT sources
 declare -A PKG_VER=() PKG_FILE=() PKG_SHA=() PKG_SIZE=() PKG_SUITE=() PKG_AID=()
 declare -A IDX_LOADED=() IDX_FAILED=() IN_SET=()
@@ -532,7 +533,7 @@ find_session_env() {
 			if [[ -n $pid ]]; then S_PROC=$p; break; fi
 		done
 	fi
-	if [[ -n $pid && -r /proc/$pid/environ ]]; then
+	if [[ -n $pid ]]; then   # unreadable for protected processes: then nothing is read
 		while IFS= read -r -d '' line; do
 			case $line in
 				DBUS_SESSION_BUS_ADDRESS=*) [[ -n $S_DBUS ]]    || S_DBUS=${line#*=} ;;
@@ -543,7 +544,7 @@ find_session_env() {
 				XDG_CURRENT_DESKTOP=*)      [[ -n $S_XDG_DESKTOP ]] || S_XDG_DESKTOP=${line#*=} ;;
 				DESKTOP_SESSION=*)          [[ -n $S_DESKTOP_SESSION ]] || S_DESKTOP_SESSION=${line#*=} ;;
 			esac
-		done </proc/"$pid"/environ
+		done < <(cat -- "/proc/$pid/environ" 2>/dev/null || true)
 	fi
 	if [[ -z $S_RUNTIME && -d /run/user/$S_UID ]]; then S_RUNTIME=/run/user/$S_UID; fi
 	if [[ -z $S_DBUS && -n $S_RUNTIME && -S $S_RUNTIME/bus ]]; then S_DBUS="unix:path=$S_RUNTIME/bus"; fi
@@ -1523,7 +1524,11 @@ resolve_all() {
 	# works on Debian), and blueman for Bluetooth unless Raspberry Pi's panel,
 	# which has its own Bluetooth plugin, is used.
 	if (( O_PANEL )) && [[ " ${DESKTOPS[*]} " == *" lxde "* ]]; then
-		[[ -n $(_installed_version network-manager) ]] && helpers+=("$(_nm_applet_pkg "$H_SUITE")")
+		if [[ -n $(_installed_version network-manager) ]]; then   # derivatives may name it differently
+			for p in "$(_nm_applet_pkg "$H_SUITE")" network-manager-gnome; do
+				if [[ -n $O_REPO ]] || apt_has "$p"; then helpers+=("$p"); break; fi
+			done
+		fi
 		if [[ -n $(_installed_version bluez) && " ${FETCH_PKGS[*]} " != *" lxpanel-pi "* ]]; then helpers+=(blueman); fi
 	fi
 	APT_PKGS=()
@@ -1539,7 +1544,7 @@ resolve_all() {
 		APT_PKGS=()
 		while read -r p; do
 			[[ -n ${PKG_VER[$p]:-} || -n $(_installed_version "$p") ]] && continue
-			if resolve_pkg "$p"; then FETCH_PKGS+=("$p"); fi
+			if resolve_pkg "$p"; then FETCH_PKGS+=("$p") DEP_PKGS+=("$p"); fi
 		done < <(INSTALLED=1 _closure "$WORKDIR/index/local/$H_SUITE/Packages-$H_ARCH" "${roots[@]}")
 		for p in "${roots[@]}"; do
 			[[ -n ${PKG_VER[$p]:-} || -n $(_installed_version "$p") ]] || warn "$p is not in the offline repository; skipping it"
@@ -1594,14 +1599,17 @@ _prime_apt_cache() {
 	done
 }
 
-# Record newly installed packages for --uninstall. Libraries and engines are
-# marked automatic, so 'apt autoremove' removes them once unused.
+# Record newly installed packages for --uninstall. Libraries, engines and,
+# offline, every dependency are marked automatic, as APT marks the
+# dependencies it installs itself, so 'apt autoremove' removes them once unused.
 _record_installed() {
 	local p newly=() autos=()
 	for p; do
 		(( O_DRY_RUN )) || [[ -n $(_installed_version "$p") ]] || continue
 		newly+=("$p")
-		case $p in gtk2-engines-*|libgtk2.0-*|libgdk-pixbuf*|gnome-icon-theme|adwaita-icon-theme*|fonts-liberation*|sound-theme-*|lpplug-*|pplug-*) autos+=("$p") ;; esac
+		case $p in gtk2-engines-*|libgtk2.0-*|libgdk-pixbuf*|gnome-icon-theme|adwaita-icon-theme*|fonts-liberation*|sound-theme-*|lpplug-*|pplug-*) autos+=("$p") ;;
+			*) if [[ " ${DEP_PKGS[*]} " == *" $p "* ]]; then autos+=("$p"); fi ;;
+		esac
 	done
 	(( ${#newly[@]} )) || return 0
 	if (( ${#autos[@]} )); then as_root apt-mark auto "${autos[@]}" >/dev/null; fi
@@ -2961,6 +2969,25 @@ do_check() {
 # ---------------------------------------------------------------------------
 # Uninstall
 # ---------------------------------------------------------------------------
+# Print the part of a package set that APT can purge without removing any
+# other package. Members that other installed software depends on are left
+# out; APT's own simulation decides.
+_safe_purge_set() {
+	local -a set=("$@") extra=() keep=()
+	local sim e
+	while (( ${#set[@]} )); do
+		sim=$(LC_ALL=C apt-get -s purge "${set[@]}" 2>/dev/null) || return 1
+		mapfile -t extra < <(awk '/^(Purg|Remv) / { sub(/:.*/, "", $2); print $2 }' <<<"$sim" \
+			| grep -vxF -f <(printf '%s\n' "${set[@]}") || true)
+		if (( ${#extra[@]} == 0 )); then printf '%s\n' "${set[@]}"; return 0; fi
+		# Keep the members those packages depend on, then try again
+		mapfile -t keep < <(for e in "${extra[@]}"; do dpkg-query -W -f='${Pre-Depends}, ${Depends}\n' "$e" 2>/dev/null; done \
+			| tr ',|' '\n' | sed 's/(.*//; s/:.*//; s/[[:space:]]//g' | grep -xF -f <(printf '%s\n' "${set[@]}") | sort -u || true)
+		(( ${#keep[@]} )) || return 1   # the dependency is indirect; remove nothing
+		mapfile -t set < <(printf '%s\n' "${set[@]}" | grep -vxF -f <(printf '%s\n' "${keep[@]}") || true)
+	done
+}
+
 # Restore the user's settings and remove what the installer added.
 do_uninstall() {
 	local -a pkgs=() still=()
@@ -2973,15 +3000,25 @@ do_uninstall() {
 	(( ${#still[@]} )) && log "  Packages installed by this script: ${still[*]}"
 	ask "Continue" y || die "aborted"
 	run_user_phase unapply_main
-	local -a purge=()
+	local -a purge=() remove=() keep=()
+	local forget=0
 	[[ -n $(_installed_version "$APP_PKG") ]] && purge+=("$APP_PKG")
-	if (( ${#still[@]} )) && ask "Also remove the Raspberry Pi OS packages installed by this script" y; then
-		purge+=("${still[@]}")
+	if (( ${#still[@]} )) && ask "Also remove the packages installed by this script" y; then
+		mapfile -t remove < <(_safe_purge_set "${still[@]}" || true)
+		for p in "${still[@]}"; do [[ " ${remove[*]} " == *" $p "* ]] || keep+=("$p"); done
+		if (( ${#keep[@]} )); then info "Kept, because other installed software needs them: ${keep[*]}"; fi
+		purge+=("${remove[@]}")
+		forget=1
 	fi
-	if (( ${#purge[@]} )); then
-		prepare_root
-		as_root env DEBIAN_FRONTEND=noninteractive apt-get purge -y "${purge[@]}"
+	if (( ${#purge[@]} || forget )); then prepare_root; fi
+	if (( ${#purge[@]} )); then as_root env DEBIAN_FRONTEND=noninteractive apt-get purge -y "${purge[@]}"; fi
+	# Packages kept for other software are left to APT: marked automatic, they go
+	# with 'apt autoremove' once nothing needs them. The record is then done with.
+	if (( forget )); then
+		if (( ${#keep[@]} )); then as_root apt-mark auto "${keep[@]}" >/dev/null; fi
 		as_root rm -rf -- "$APP_SYS_STATE"
+	fi
+	if (( ${#remove[@]} + ${#keep[@]} )); then
 		info "Run 'sudo apt autoremove' to remove dependencies that are no longer needed."
 	fi
 	ok "Uninstalled"

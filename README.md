@@ -239,6 +239,9 @@ Examples:
 
 `--uninstall` restores every backed-up setting and file, removes
 `pixflat-theme-debian` and, after asking, the packages the script installed.
+A package that other installed software has come to need is kept: APT's own
+simulation decides, so uninstalling never removes anything else. Kept packages
+are marked automatic, and `apt autoremove` removes them once nothing needs them.
 
 ## Updates
 
@@ -275,7 +278,8 @@ The installer follows [DontBreakDebian](https://wiki.debian.org/DontBreakDebian)
 * **Everything is tracked by dpkg:** no `make install`, no files copied into
   system directories. The generated `pixflat-theme-debian` package only adds files
   under `/usr/share` and is removed cleanly with APT. Libraries and engines pulled
-  in as dependencies are marked automatic, so `apt autoremove` cleans them up.
+  in as dependencies are marked automatic (offline too), so `apt autoremove`
+  cleans them up.
 * **Only official sources:** downloads are limited to `https://archive.raspberrypi.org/`
   and `https://deb.debian.org/`; any other address, plain HTTP and redirects are
   refused. Before installing, the installer checks where APT would take each
