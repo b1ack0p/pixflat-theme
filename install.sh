@@ -2238,7 +2238,9 @@ _launcher() {
 # rpd-x-core) that both panel programs share. Usage: _panel_global [KEY=VALUE]...
 _panel_global() {
 	printf '# lxpanel <profile> config file. Manually editing is not recommended.\n'
-	printf '# Use preference dialog in lxpanel to adjust config when you can.\n\n'
+	printf '# Use preference dialog in lxpanel to adjust config when you can.\n'
+	printf '# %s: the Raspberry Pi OS panel layout. Edit it in the panel\n' "$APP_NAME"
+	printf '# preferences; this file is then left alone.\n\n'
 	printf 'Global {\n'
 	printf '  %s\n' edge=top align=left margin=0 widthtype=percent width=100 height=36 transparent=0 \
 		tintcolor=#000000 alpha=0 autohide=0 heightwhenhidden=2 setdocktype=1 setpartialstrut=1 \
@@ -2739,19 +2741,26 @@ apply_de_lxde() {
 
 	# Panel and menu: set up on the first installation only, so plugins the
 	# user adds or removes later are kept. Extra tray applets are hidden once each.
-	if (( O_PANEL )) && _once lxde-panel; then
+	local panel=$HOME/.config/lxpanel/$sess/panels/panel
+	(( O_PI_PANEL )) && panel=$HOME/.config/lxpanel-pi/panels/panel
+	# The panel is written on the first installation, and afterwards while it is
+	# still the one written here (the marker is gone once the user edits it in
+	# the panel preferences, which rewrite the file).
+	if (( O_PANEL )) && { _once lxde-panel-2 || grep -qF "# $APP_NAME:" "$panel" 2>/dev/null; }; then
 		if (( O_PI_PANEL )); then   # Debian 13 and later: Raspberry Pi's own panel
-			_pi_panel_write "$HOME/.config/lxpanel-pi/panels/panel"
+			_pi_panel_write "$panel"
 			_lxsession_panel "$sess" lxpanel-pi
 		else
-			_lxpanel_write "$HOME/.config/lxpanel/$sess/panels/panel"
+			_lxpanel_write "$panel"
 		fi
+		ok "Panel layout written ($(basename "$panel"): Raspberry Pi OS)"
 		_lxde_menu_write
 	elif (( O_PANEL )) && grep -qF "<!-- $APP_NAME:" "$HOME/.config/menus/lxde-applications.menu" 2>/dev/null; then
 		_lxde_menu_write   # still the installer's menu (not edited by a menu editor): keep it current
+		ok "Application menu updated (Raspberry Pi OS categories, Run and Shutdown)"
 	fi
 	if (( O_PANEL && O_PI_PANEL )) && [[ -f $rc ]]; then _pi_panel_keys "$rc"; fi
-	if (( O_PANEL && O_PI_PANEL )); then _pi_panel_css; fi
+	if (( O_PANEL && O_PI_PANEL )); then _pi_panel_css; ok "Raspberry Pi panel style for $T_GTK applied (tray icons, buttons)"; fi
 	if (( O_PANEL )); then _hide_extra_applets; fi
 	if [[ -n ${DISPLAY:-} ]]; then
 		if _running openbox; then run openbox --reconfigure || true; fi
@@ -2761,9 +2770,13 @@ apply_de_lxde() {
 		if _running pcmanfm; then
 			run pcmanfm --desktop-off || true
 			run setsid -f pcmanfm --desktop --profile "$sess" || true
+			ok "Desktop restarted with the new settings"
 		fi
 		if (( O_PANEL && ! O_PI_PANEL )) && _running lxpanel; then run lxpanelctl restart || true; fi
-		if (( O_PANEL && O_PI_PANEL )) && _running lxpanel-pi; then run lxpanelctl-pi restart || true; fi
+		if (( O_PANEL && O_PI_PANEL )) && _running lxpanel-pi; then
+			run lxpanelctl-pi restart || true
+			ok "Raspberry Pi panel restarted"
+		fi
 	fi
 	ok "LXDE configured (session '$sess')"
 	if (( O_PI_PANEL && O_PANEL )); then
@@ -2996,6 +3009,7 @@ apply_main() {
 	step "Applying $T_DESC for $(id -un)"
 	apply_gtk_files
 	_hide_official_icons
+	ok "Icons and cursors: $A_ICONS (the official sets are hidden in theme choosers)"
 	if (( O_GTK4 )); then apply_gtk4_colors; fi
 	if (( O_WITH_FONT )); then apply_mono_font; fi
 	local de
@@ -3325,6 +3339,40 @@ _start_log() {
 	LOG_FILE=$log
 }
 
+# Report what the desktop ended up with: the menu and panel files, their
+# Raspberry Pi entries and the panel in use. It goes to the log as well, and is
+# the first thing to look at when the desktop does not match.
+_log_state() {
+	local h=${S_HOME:-} m f v
+	[[ -n $h && -d $h ]] || return 0
+	log ""
+	log "  Desktop state"
+	m=$h/.config/menus/lxde-applications.menu
+	if [[ -f $m ]]; then
+		v=$(grep -o 'gui-runcmd.desktop\|pishutdown.desktop' "$m" | sort -u | paste -sd'+' - || true)
+		log "    menu       $m: $(grep -c '<Menu>' "$m") categories, ${v:-no Run or Shutdown entry}"
+	else
+		log "    menu       $m: not written"
+	fi
+	for f in "$h/.config/lxpanel-pi/panels/panel" "$h/.config/lxpanel"/*/panels/panel; do
+		[[ -f $f ]] || continue
+		v=$(grep -h '^[ \t]*type=' "$f" | sed 's/^[ \t]*type=//' | paste -sd' ' - || true)
+		log "    panel      $f:"
+		log "               ${v:-no plugins}"
+	done
+	v=$(pgrep -a -u "${S_UID:-$UID}" -x 'lxpanel|lxpanel-pi' 2>/dev/null | paste -sd'; ' - || true)
+	log "    running    ${v:-no panel process}"
+	v=$(grep -h lxpanel "$h/.config/lxsession"/*/autostart 2>/dev/null | paste -sd' ' - || true)
+	log "    autostart  ${v:-nothing for lxpanel}"
+	v=""
+	for f in gui-runcmd pishutdown debian-reference-common; do
+		[[ -f /usr/share/applications/$f.desktop ]] && v+="$f "
+	done
+	log "    entries    ${v:-none installed}"
+	v=$(sed -n 's/^gtk-icon-theme-name=//p' "$h/.config/gtk-3.0/settings.ini" 2>/dev/null || true)
+	log "    icons      ${v:-not set}"
+}
+
 # Entry point: parse options, then check, uninstall, rebuild ./packages, or
 # install and apply a theme.
 main() {
@@ -3380,6 +3428,7 @@ main() {
 	info "Change the look any time: $(_self_cmd) --apply-only (GTK theme and icons also in your desktop's appearance settings)."
 	if (( O_DO_INSTALL )); then info "Check for updates: $(_self_cmd) --check"; fi
 	info "Undo everything: $(_self_cmd) --uninstall"
+	_log_state
 	if [[ -n ${LOG_FILE:-} ]]; then info "Log of this run: $LOG_FILE"; fi
 }
 
