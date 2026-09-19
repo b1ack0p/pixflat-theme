@@ -132,6 +132,21 @@ Size: 87080
 SHA256: 70844a2ed8f799f69c7c390c2846e57c86a00e9dc2a0ee6cf957cf606f4703c2
 Description: clearlookspix theme for GTK+ 2.x
 
+Package: pi-greeter
+Version: 0.25
+Architecture: i386
+Depends: libc6 (>= 2.34), libcairo2 (>= 1.2.4), libgdk-pixbuf-2.0-0 (>= 2.22.0), libglib2.0-0 (>= 2.30.0), libgtk-3-0 (>= 3.21.4), libgtk-layer-shell0 (>= 0.1.0), liblightdm-gobject-1-0 (>= 1.8.7), libx11-6
+Recommends: desktop-base, gnome-themes-standard, gnome-icon-theme-symbolic, policykit-1
+Installed-Size: 374
+Maintainer: Simon Long <simon@raspberrypi.org>
+Section: x11
+Priority: optional
+Multi-Arch: no
+Filename: pool/greeter/pi-greeter_0.25_i386.deb
+Size: 41888
+SHA256: ed4d5e7971dc4ebad95b8cf4e440fde9f4b240b353ff0600f76ad17ad5a141af
+Description: GTK greeter for Raspberry Pi
+
 Package: pixtrix-theme
 Version: 0.6
 Architecture: i386
@@ -281,4 +296,34 @@ Filename: pool/engines/libgdk-pixbuf2.0-0_2.40.2-2_i386.deb
 Size: 14140
 SHA256: e3d9f6643fdda2f3b44f167ece42a672cb74de4d2f25bfe5a9961d6bdf1ff9e6
 Description: GDK Pixbuf library (transitional package)
+
+Package: libgtk-layer-shell0
+Version: 0.8.0-1
+Architecture: i386
+Depends: libc6 (>= 2.4), libglib2.0-0 (>= 2.41.2), libgtk-3-0 (>= 3.21.4), libwayland-client0 (>= 1.20.0)
+Installed-Size: 302
+Maintainer: Debian+Ubuntu MATE Packaging Team <debian-mate@lists.debian.org>
+Section: libs
+Priority: optional
+Multi-Arch: no
+Source: gtk-layer-shell
+Filename: pool/dependencies/libgtk-layer-shell0_0.8.0-1_i386.deb
+Size: 54480
+SHA256: 76071a518fe9a6b26d86dff073960e60c676ef969d476e30ea3cc3baaefb14fe
+Description: Wayland Layer Shell protocol desktop component library
+
+Package: liblightdm-gobject-1-0
+Version: 1.26.0-8
+Architecture: i386
+Depends: libc6 (>= 2.4), libglib2.0-0 (>= 2.37.3), libx11-6, libxklavier16 (>= 5.0)
+Installed-Size: 177
+Maintainer: Debian Xfce Maintainers <debian-xfce@lists.debian.org>
+Section: libs
+Priority: optional
+Multi-Arch: same
+Source: lightdm
+Filename: pool/dependencies/liblightdm-gobject-1-0_1.26.0-8_i386.deb
+Size: 67076
+SHA256: 49018bed6a63f6a85cc9785d1175bf7baef6d48baae0c6ea8bde6af20447f67d
+Description: simple display manager (GObject library)
 

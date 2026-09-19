@@ -132,6 +132,21 @@ Size: 87080
 SHA256: 70844a2ed8f799f69c7c390c2846e57c86a00e9dc2a0ee6cf957cf606f4703c2
 Description: clearlookspix theme for GTK+ 2.x
 
+Package: pi-greeter
+Version: 0.16
+Architecture: i386
+Depends: libc6 (>= 2.4), libcairo2 (>= 1.2.4), libgdk-pixbuf-2.0-0 (>= 2.22.0), libglib2.0-0 (>= 2.30.0), libgtk-3-0 (>= 3.21.4), liblightdm-gobject-1-0 (>= 1.8.7), libx11-6
+Recommends: desktop-base, gnome-themes-standard, gnome-icon-theme-symbolic, policykit-1
+Installed-Size: 383
+Maintainer: Simon Long <simon@raspberrypi.org>
+Section: x11
+Priority: optional
+Multi-Arch: no
+Filename: pool/greeter/pi-greeter_0.16_i386.deb
+Size: 43584
+SHA256: 8e7860a61c2b3d4567eac83d850e5ab904686563389991a204e1298e3cc05cac
+Description: GTK greeter for Raspberry Pi
+
 Package: pixtrix-theme
 Version: 0.6
 Architecture: i386
@@ -277,4 +292,19 @@ Filename: pool/icons/gnome-icon-theme_3.12.0-3_all.deb
 Size: 9869120
 SHA256: 8112a83e2758f42df01c2811d09e23d7fa7d0733826941f03cd4e509aeeaf23f
 Description: GNOME Desktop icon theme
+
+Package: liblightdm-gobject-1-0
+Version: 1.26.0-7
+Architecture: i386
+Depends: libc6 (>= 2.4), libglib2.0-0 (>= 2.37.3), libx11-6, libxklavier16 (>= 5.0)
+Installed-Size: 177
+Maintainer: Debian Xfce Maintainers <debian-xfce@lists.debian.org>
+Section: libs
+Priority: optional
+Multi-Arch: same
+Source: lightdm
+Filename: pool/dependencies/liblightdm-gobject-1-0_1.26.0-7_i386.deb
+Size: 67320
+SHA256: 26420b4bb77a6d862392990af63a7b0fd178e5d61f655416d7e1096c1b3b5450
+Description: simple display manager (GObject library)
 

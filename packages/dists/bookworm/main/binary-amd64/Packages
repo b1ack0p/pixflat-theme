@@ -132,6 +132,21 @@ Size: 80088
 SHA256: 3f414c9ab1029809b77a02fb73abadbd60fc602c255f857aaa20471397f400d8
 Description: clearlookspix theme for GTK+ 2.x
 
+Package: pi-greeter
+Version: 0.25
+Architecture: amd64
+Depends: libc6 (>= 2.34), libcairo2 (>= 1.2.4), libgdk-pixbuf-2.0-0 (>= 2.22.0), libglib2.0-0 (>= 2.30.0), libgtk-3-0 (>= 3.21.4), libgtk-layer-shell0 (>= 0.1.0), liblightdm-gobject-1-0 (>= 1.8.7), libx11-6
+Recommends: desktop-base, gnome-themes-standard, gnome-icon-theme-symbolic, policykit-1
+Installed-Size: 379
+Maintainer: Simon Long <simon@raspberrypi.org>
+Section: x11
+Priority: optional
+Multi-Arch: no
+Filename: pool/greeter/pi-greeter_0.25_amd64.deb
+Size: 41052
+SHA256: 778bb708c4582983fb985cf31132f66f090dc773b8041eec3d996c9668ebdea5
+Description: GTK greeter for Raspberry Pi
+
 Package: pixtrix-theme
 Version: 0.6
 Architecture: amd64
@@ -281,4 +296,34 @@ Filename: pool/engines/libgdk-pixbuf2.0-0_2.40.2-2_amd64.deb
 Size: 14144
 SHA256: 2e1988105dee8597fbb356aeb04cc9e2f9774626d0d2dbd18984d3a500f096c6
 Description: GDK Pixbuf library (transitional package)
+
+Package: libgtk-layer-shell0
+Version: 0.8.0-1
+Architecture: amd64
+Depends: libc6 (>= 2.4), libglib2.0-0 (>= 2.41.2), libgtk-3-0 (>= 3.21.4), libwayland-client0 (>= 1.20.0)
+Installed-Size: 283
+Maintainer: Debian+Ubuntu MATE Packaging Team <debian-mate@lists.debian.org>
+Section: libs
+Priority: optional
+Multi-Arch: no
+Source: gtk-layer-shell
+Filename: pool/dependencies/libgtk-layer-shell0_0.8.0-1_amd64.deb
+Size: 52608
+SHA256: 2dc6f07634d08472e6e17797de6a41dac860bd903af2c3f301dcba29fe53a78d
+Description: Wayland Layer Shell protocol desktop component library
+
+Package: liblightdm-gobject-1-0
+Version: 1.26.0-8
+Architecture: amd64
+Depends: libc6 (>= 2.14), libglib2.0-0 (>= 2.37.3), libx11-6, libxklavier16 (>= 5.0)
+Installed-Size: 161
+Maintainer: Debian Xfce Maintainers <debian-xfce@lists.debian.org>
+Section: libs
+Priority: optional
+Multi-Arch: same
+Source: lightdm
+Filename: pool/dependencies/liblightdm-gobject-1-0_1.26.0-8_amd64.deb
+Size: 63468
+SHA256: ee103d814e4bc16fa451280c0c0a0a84b97da6aa48fe874c8b38f97fdf9944cf
+Description: simple display manager (GObject library)
 

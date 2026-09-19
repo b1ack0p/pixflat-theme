@@ -1,6 +1,6 @@
 # Package versions
 
-Built by `install-offline.sh --update-packages` (pixflat-theme 2.0.0) on 2026-09-19 21:55 UTC from
+Built by `install-offline.sh --update-packages` (pixflat-theme 2.0.0) on 2026-09-19 23:04 UTC from
 https://archive.raspberrypi.org/debian and https://deb.debian.org/debian. Every file is listed in `SHA256SUMS`.
 
 | Package | Version | Releases | Source |
@@ -28,6 +28,10 @@ https://archive.raspberrypi.org/debian and https://deb.debian.org/debian. Every 
 | libgtk2.0-0t64 | 2.24.33-7 | trixie | Debian |
 | libgtk2.0-bin | 2.24.33-7 | trixie | Debian |
 | libgtk2.0-common | 2.24.33-7 | trixie | Debian |
+| libgtk-layer-shell0 | 0.8.0-1 | bookworm | Debian |
+| libgtk-layer-shell0 | 0.9.0-2 | trixie | Debian |
+| liblightdm-gobject-1-0 | 1.26.0-7 | bullseye | Debian |
+| liblightdm-gobject-1-0 | 1.26.0-8 | bookworm | Debian |
 | lpplug-batt | 1.10 | trixie | Raspberry Pi OS |
 | lpplug-bluetooth | 1.14 | trixie | Raspberry Pi OS |
 | lpplug-clock | 1.13 | trixie | Raspberry Pi OS |
@@ -36,6 +40,9 @@ https://archive.raspberrypi.org/debian and https://deb.debian.org/debian. Every 
 | lpplug-menu | 1.25 | trixie | Raspberry Pi OS |
 | lpplug-volumepulse | 1.19 | trixie | Raspberry Pi OS |
 | lxpanel-pi | 1.11 | trixie | Raspberry Pi OS |
+| pi-greeter | 0.16 | bullseye | Raspberry Pi OS |
+| pi-greeter | 0.25 | bookworm | Raspberry Pi OS |
+| pi-greeter | 1.3 | trixie | Raspberry Pi OS |
 | pishutdown | 0.42 | trixie | Raspberry Pi OS |
 | pixflat-icons | 0.28 | bookworm, bullseye, trixie | Raspberry Pi OS |
 | pixflat-theme | 0.24+b1 | bookworm, bullseye, trixie | Raspberry Pi OS |

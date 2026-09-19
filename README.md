@@ -118,7 +118,7 @@ file manager and system tools are never installed.
 | Panel (LXDE, Debian 11 and 12) | Debian's panel with the same layout and geometry: menu (Debian logo), launchers, taskbar, tray, volume, clock (`HH:MM`), battery (laptops) |
 | Notification icons | the Raspberry Pi OS icons for sound, network and Bluetooth (the legacy PiX icons take the ones they lack from PiXflat): Debian's volume plugin, `nm-applet` and `blueman` show the same images as the Raspberry Pi panel plugins (Wi-Fi strength, wired, offline, connecting, VPN, Bluetooth on/off); secured connections show the plain signal icon, as in Raspberry Pi OS. On the Raspberry Pi panel, tray icons get an opaque background in the panel colour, because that panel's tray does not clear an icon before redrawing it (without it, `nm-applet` showed a doubled icon) |
 | Tray applets (LXDE) | `nm-applet` for the network icon is installed if NetworkManager is; `blueman` for Bluetooth if BlueZ is, on Debian 11 and 12 (the Raspberry Pi panel on Debian 13 has its own Bluetooth plugin). Tray applets Raspberry Pi OS does not show (clipboard managers such as Diodon, other volume applets, `blueman` with the Raspberry Pi panel) are hidden once for your user, not removed; enable one again in *Desktop Session Settings* and it stays |
-| Login screen | when Debian's LightDM GTK greeter is installed (`--no-lightdm` to skip): the Raspberry Pi OS login screen with Debian's greeter: its wallpaper (the dark one with PiXnoir and PiXonyx), centred login box, user list, theme, icons, cursor and font, and the Debian logo as the default user picture |
+| Login screen | when LightDM is installed (`--no-lightdm` to skip): **Raspberry Pi's own greeter** (`pi-greeter`), so the login box, its layout and the background are the same as on Raspberry Pi OS. Its settings match the official `pi-greeter.conf` (background colour, the `RPiSystem` wallpaper cropped, theme, icons and font), with the Debian logo instead of the Raspberry Pi one. The original `/etc/lightdm/pi-greeter.conf` is kept and restored by `--uninstall`. Where that greeter cannot run, Debian's LightDM GTK greeter is styled to look as close as possible instead |
 | Application menu (LXDE) | Raspberry Pi OS categories and order: Programming, Education, Science, Office, Internet, Sound & Video, Graphics, Games, Other, System Tools, Accessories, then Help, Preferences, Run and Shutdown; Help holds Debian Reference (`debian-reference-common`), as Raspberry Pi OS puts its documentation there; empty categories are hidden until an application of that category is installed. The menu is kept up to date by later runs unless you edit it with a menu editor |
 | File manager (PCManFM) | 943×653 window, folder tree side pane, icon view with thumbnails, new tab/navigation/home toolbar, status bar; icons 48 px, small and side pane icons 24 px, thumbnails 80 px; places: home, root and drives |
 | Desktop | wallpaper, desktop colours and font, trash and drive icons, no documents icon; the desktop is restarted so the settings (and the Desktop Preferences dialog) follow at once |
@@ -242,9 +242,10 @@ Examples:
 6. **Applies the settings** for the detected desktop, live when possible. Every file
    and setting it changes is backed up first (`~/.local/state/pixflat-theme`).
 
-Every run is logged to `~/pixflat-theme.log` (the system, the session, the
-packages and everything the run printed), which is the first place to look when
-something is not as expected.
+Every run writes its own log, `~/pixflat-theme-DATE-TIME.log` (the system, the
+session, the packages, every step with a timestamp, and the desktop state
+afterwards), which is the first place to look when something is not as
+expected.
 
 `--uninstall` restores every backed-up setting and file, removes
 `pixflat-theme-debian` and, after asking, the packages the script installed.
@@ -317,6 +318,7 @@ packages/
 │   ├── panel/        lxpanel-pi, plugins, pishutdown, gui-runcmd (Debian 13), nm-applet, blueman (Debian 11, 12)
 │   ├── dependencies/ libraries the themes and applets need that a Debian desktop lacks
 │   ├── engines/      GTK 2 engines and runtime: gtk2-engines-*, libgtk2.0-*, libgdk-pixbuf*
+│   ├── greeter/      pi-greeter (Raspberry Pi's own login screen)
 │   └── wallpapers/   rpd-wallpaper, rpd-wallpaper-trixie, their 4K sets, and rpd-common
 │                     (only for the login screen wallpaper; never installed)
 ├── dists/<release>/main/binary-<arch>/Packages
@@ -362,10 +364,14 @@ Debian 11 or newer, or a derivative, on amd64 or i386 (x86) or arm64 or armhf (A
 
 ## LightDM tips
 
-* The login screen style is a drop-in file of `pixflat-theme-debian`
-  (`/usr/share/lightdm/lightdm-gtk-greeter.conf.d/60_pixflat-theme.conf`).
-  Settings in `/etc/lightdm/lightdm-gtk-greeter.conf` (written by *LightDM GTK
-  Greeter Settings*) take precedence.
+* The login screen uses Raspberry Pi's greeter, selected in a drop-in file of
+  `pixflat-theme-debian` (`/usr/share/lightdm/lightdm.conf.d/60_pixflat-theme.conf`),
+  and configured in `/etc/lightdm/pi-greeter.conf`. Settings in
+  `/etc/lightdm/lightdm.conf` take precedence.
+* Without that greeter, Debian's LightDM GTK greeter is styled instead, through
+  `/usr/share/lightdm/lightdm-gtk-greeter.conf.d/60_pixflat-theme.conf`; settings
+  in `/etc/lightdm/lightdm-gtk-greeter.conf` (written by *LightDM GTK Greeter
+  Settings*) take precedence.
 * The user list is shown, as in Raspberry Pi OS
   (`/usr/share/lightdm/lightdm.conf.d/60_pixflat-theme.conf`). To hide it again,
   set `greeter-hide-users=true` in `/etc/lightdm/lightdm.conf`.
@@ -390,6 +396,7 @@ package files in [`pool/main/`](https://archive.raspberrypi.org/debian/pool/main
 | GTK 2 engines | [gtk2-engines-pixflat](https://archive.raspberrypi.org/debian/pool/main/g/gtk2-engines-pixflat/), [gtk2-engines-clearlookspix](https://archive.raspberrypi.org/debian/pool/main/g/gtk2-engines-clearlookspix/) |
 | Fonts | [fonts-piboto](https://archive.raspberrypi.org/debian/pool/main/f/fonts-piboto/), [fonts-nunito-sans](https://archive.raspberrypi.org/debian/pool/main/f/fonts-nunito-sans/) |
 | Panel (Debian 13) | [lxpanel-pi](https://archive.raspberrypi.org/debian/pool/main/l/lxpanel-pi/), plugins [menu](https://archive.raspberrypi.org/debian/pool/main/p/pplug-menu/), [volume](https://archive.raspberrypi.org/debian/pool/main/p/pplug-volumepulse/), [Bluetooth](https://archive.raspberrypi.org/debian/pool/main/p/pplug-bluetooth/), [eject](https://archive.raspberrypi.org/debian/pool/main/p/pplug-ejecter/), [clock](https://archive.raspberrypi.org/debian/pool/main/p/pplug-clock/), [battery](https://archive.raspberrypi.org/debian/pool/main/p/pplug-batt/), [magnifier](https://archive.raspberrypi.org/debian/pool/main/l/lpplug-magnifier/), Shutdown dialog [pishutdown](https://archive.raspberrypi.org/debian/pool/main/p/pishutdown/), Run dialog [gui-runcmd](https://archive.raspberrypi.org/debian/pool/main/g/gui-runcmd/) |
+| Login screen | [pi-greeter](https://archive.raspberrypi.org/debian/pool/main/p/pi-greeter/) (Raspberry Pi's own LightDM greeter) |
 | Wallpapers | [rpd-wallpaper](https://archive.raspberrypi.org/debian/pool/main/r/rpd-wallpaper/), [rpd-wallpaper-4k](https://archive.raspberrypi.org/debian/pool/main/r/rpd-wallpaper-4k/), [rpd-wallpaper-trixie](https://archive.raspberrypi.org/debian/pool/main/r/rpd-wallpaper-trixie/), [rpd-wallpaper-trixie-4k](https://archive.raspberrypi.org/debian/pool/main/r/rpd-wallpaper-trixie-4k/); login screen wallpaper from [rpd-common](https://archive.raspberrypi.org/debian/pool/main/r/rpd-metas/) (unpacked, not installed; BSD-3-Clause) |
 
 The desktop settings (fonts, colours, panel and window layout) are the values from

@@ -128,6 +128,11 @@ readonly ICON_ALIASES=(
 	"nm-signal-00-secure:nm-signal-00"              "nm-signal-25-secure:nm-signal-25"
 	"nm-signal-50-secure:nm-signal-50"              "nm-signal-75-secure:nm-signal-75"
 	"nm-signal-100-secure:nm-signal-100"
+	"inode-directory:folder"                        "folder-open:folder"
+	"media-optical:media-removable"                 "drive-optical:media-removable"
+	"drive-removable-media:media-removable"         "media-flash:media-removable"
+	"network-wired:network-transmit-receive"        "network-wireless:network-wireless-connected-100"
+	"network-workgroup:network"                     "network-server:network"
 	"blueman:bluetooth-active"                      "blueman-tray:bluetooth-active"
 	"blueman-active:bluetooth-online"               "blueman-disabled:bluetooth-offline"
 	"bluetooth-symbolic:bluetooth-active"           "!bluetooth-disabled:bluetooth-offline"
@@ -392,9 +397,9 @@ _icons_pkg() { case $1 in pixflat) echo pixflat-icons ;; pixtrix) echo pixtrix-i
 # Print the Raspberry Pi OS packages one theme family needs (--only).
 _family_pkgs() {
 	case $1 in
-		pixflat|pixnoir) echo pixflat-theme pixflat-icons gtk2-engines-pixflat fonts-piboto rpd-wallpaper rpd-wallpaper-4k ;;
-		pixtrix|pixonyx) echo pixtrix-theme pixtrix-icons gtk2-engines-pixflat fonts-nunito-sans rpd-wallpaper-trixie rpd-wallpaper-trixie-4k ;;
-		pix)             echo pix-theme rpd-icons gtk2-engines-clearlookspix fonts-piboto rpd-wallpaper rpd-wallpaper-4k ;;
+		pixflat|pixnoir) echo pixflat-theme pixflat-icons gtk2-engines-pixflat fonts-piboto rpd-wallpaper rpd-wallpaper-4k pi-greeter ;;
+		pixtrix|pixonyx) echo pixtrix-theme pixtrix-icons gtk2-engines-pixflat fonts-nunito-sans rpd-wallpaper-trixie rpd-wallpaper-trixie-4k pi-greeter ;;
+		pix)             echo pix-theme rpd-icons gtk2-engines-clearlookspix fonts-piboto rpd-wallpaper rpd-wallpaper-4k pi-greeter ;;
 	esac
 }
 
@@ -402,7 +407,7 @@ _family_pkgs() {
 # theme, and Raspberry Pi's panel (built for Debian 13) on Debian 13.
 _bundle_rpi_pkgs() {
 	printf '%s\n' pixflat-theme pixflat-icons gtk2-engines-pixflat fonts-piboto rpd-wallpaper \
-		rpd-wallpaper-4k pix-theme rpd-icons gtk2-engines-clearlookspix \
+		rpd-wallpaper-4k pix-theme rpd-icons gtk2-engines-clearlookspix pi-greeter \
 		pixtrix-theme pixtrix-icons fonts-nunito-sans rpd-wallpaper-trixie rpd-wallpaper-trixie-4k
 	if (( $(_suite_rank "$1") >= 3 )); then _pi_panel_pkgs; fi
 }
@@ -1282,10 +1287,13 @@ gen_icon_overlay() {
 	mapfile -t dirs < <(cd "$out" && find . -mindepth 2 -maxdepth 2 -type d ! -path './cursors*' -printf '%P\n' | sort)
 	debug "$base: icon aliases in ${#dirs[@]} directories"
 	inh=$(sed -n 's/^Inherits[[:space:]]*=[[:space:]]*//p' "$bdir/index.theme" | head -n1)
-	# The legacy PiX set lacks many current icons (network, Bluetooth, battery,
-	# the panel's sizes): take them from PiXflat, not from GNOME
-	if [[ $base == PiX && -f $SYS_ROOT/usr/share/icons/PiXflat/index.theme ]]; then inh=PiXflat,$inh; fi
-	inh=$(tr ',' '\n' <<<"$base,$inh,Adwaita,hicolor" | awk 'NF && !seen[$0]++' | paste -sd, -)
+	# An icon a set lacks comes from the other Raspberry Pi OS sets first, so
+	# that it still looks like Raspberry Pi OS instead of GNOME's fallback
+	local pi=""
+	for d in PiXtrix PiXflat PiX; do
+		[[ $d != "$base" && -f $SYS_ROOT/usr/share/icons/$d/index.theme ]] && pi+="$d,"
+	done
+	inh=$(tr ',' '\n' <<<"$base,$pi$inh,Adwaita,hicolor" | awk 'NF && !seen[$0]++' | paste -sd, -)
 	{
 		printf '[Icon Theme]\nName=%s (Debian)\n' "$base"
 		printf 'Comment=Raspberry Pi OS %s icons and cursors with Debian compatibility names\n' "$base"
@@ -1401,8 +1409,11 @@ build_local_pkg() {
 			if [[ -n $logo ]]; then printf 'default-user-image=%s\n' "$logo"; fi
 		} >"$stage$greeter"
 		# Raspberry Pi OS lists the users to choose from (pi-greeter's postinst)
-		printf '# Installed by %s: list users, as Raspberry Pi OS does\n[Seat:*]\ngreeter-hide-users=false\n' \
-			"$APP_NAME" >"$stage$seat"
+		# and, where its own greeter is installed, uses it
+		{
+			printf '# Installed by %s: list users, as Raspberry Pi OS does\n[Seat:*]\ngreeter-hide-users=false\n' "$APP_NAME"
+			if _pi_greeter_ok; then printf 'greeter-session=pi-greeter-x\n'; fi
+		} >"$stage$seat"
 	elif (( O_LIGHTDM )); then
 		# No look chosen (--install-only): keep the installed login screen style
 		for f in "$greeter" "$seat" "$art"; do
@@ -1502,6 +1513,7 @@ resolve_all() {
 		[[ -z $fam || $fam == *" $p "* ]] || continue
 		case $p in
 			fonts-*)           (( O_WITH_FONT )) || continue ;;
+			pi-greeter)        if (( ! O_LIGHTDM )) || [[ -z $(_installed_version lightdm) ]]; then continue; fi ;;
 			rpd-wallpaper*-4k) (( walls && O_4K )) || continue ;;
 			rpd-wallpaper*)    (( walls && ! O_4K )) || continue ;;
 		esac
@@ -1780,6 +1792,42 @@ install_local_pkg() {
 	ok "Installed $(basename "$f")"
 }
 
+# Succeed if Raspberry Pi's own greeter is installed and can run here.
+_pi_greeter_ok() {
+	[[ -x /usr/sbin/pi-greeter && -f /usr/share/xgreeters/pi-greeter-x.desktop ]] || return 1
+	! ldd /usr/sbin/pi-greeter 2>/dev/null | grep -q 'not found'
+}
+
+# Set up Raspberry Pi's own login screen: its greeter program shows the same
+# login box, so only its settings (pi-greeter.conf) are adapted: the Debian
+# logo instead of the Raspberry Pi one, the login wallpaper this script
+# unpacked, and the chosen theme, icons and font. The original file is kept and
+# --uninstall puts it back.
+install_greeter_conf() {
+	local conf=/etc/lightdm/pi-greeter.conf img=RPiSystem.png logo wall
+	_pi_greeter_ok || return 0
+	(( T_DARK )) && img=RPiSystem_dark.png
+	logo=$(_greeter_logo || true)
+	wall=/usr/share/$APP_PKG/login/$img
+	[[ -f $wall ]] || wall=/usr/share/$APP_PKG/login/RPiSystem.png
+	step "Setting up the Raspberry Pi OS login screen (pi-greeter)"
+	if (( O_DRY_RUN )); then log "   [dry-run] $conf: Debian logo, wallpaper, $T_GTK, $T_FONT"; return 0; fi
+	as_root mkdir -p "$APP_SYS_STATE"
+	if [[ -f $conf && ! -f $APP_SYS_STATE/pi-greeter.conf.orig ]]; then
+		as_root cp -a -- "$conf" "$APP_SYS_STATE/pi-greeter.conf.orig"
+	fi
+	{
+		printf '# Written by %s %s: the Raspberry Pi OS login screen with Debian branding.\n' "$APP_NAME" "$APP_VERSION"
+		printf '# The original file is in %s.\n[greeter]\n' "$APP_SYS_STATE/pi-greeter.conf.orig"
+		if [[ -n $logo ]]; then printf 'default-user-image=%s\n' "$logo"; fi
+		printf 'desktop_bg=%s\n' "$T_DESK_BG"
+		if [[ -f $wall ]]; then printf 'wallpaper=%s\nwallpaper_mode=crop\n' "$wall"; fi
+		printf 'gtk-theme-name=%s\ngtk-icon-theme-name=%s-Debian\n' "$T_GTK" "$T_ICON_BASE"
+		if [[ -n $T_FONT ]]; then printf 'gtk-font-name=%s\n' "$T_FONT"; fi
+	} | as_root tee "$conf" >/dev/null
+	ok "Login screen: Raspberry Pi's own greeter, with the Debian logo"
+}
+
 # ---------------------------------------------------------------------------
 # Offline repository builder (install-offline.sh --update-packages)
 # ---------------------------------------------------------------------------
@@ -1787,6 +1835,7 @@ install_local_pkg() {
 _pkg_category() {
 	case $1 in
 		sound-theme-*)               echo sounds ;;
+		pi-greeter)                  echo greeter ;;
 		lxpanel-pi|lpplug-*|pplug-*|pishutdown|gui-runcmd|debian-reference-*|network-manager-gnome|network-manager-applet|nm-connection-editor|blueman) echo panel ;;
 		*icon-theme*|*-icons)        echo icons ;;
 		*-theme)                     echo themes ;;
@@ -3193,6 +3242,11 @@ do_uninstall() {
 	[[ -n $(_installed_version "$APP_PKG") ]] && log "  Remove package:              $APP_PKG"
 	(( ${#still[@]} )) && log "  Packages installed by this script: ${still[*]}"
 	ask "Continue" y || die "aborted"
+	if [[ -f $APP_SYS_STATE/pi-greeter.conf.orig ]]; then
+		prepare_root
+		as_root cp -a -- "$APP_SYS_STATE/pi-greeter.conf.orig" /etc/lightdm/pi-greeter.conf
+		ok "Restored the previous /etc/lightdm/pi-greeter.conf"
+	fi
 	run_user_phase unapply_main
 	local -a purge=() remove=() keep=()
 	local forget=0
@@ -3332,11 +3386,13 @@ cleanup() {
 	if [[ -n $BUILD_STAGE && -d $BUILD_STAGE ]]; then rm -rf -- "$BUILD_STAGE"; fi
 }
 
-# Copy everything this run prints to ~/pixflat-theme.log in the target user's
-# home (without colours), after a header describing the system, so that a run
-# can be reviewed or shared when something looks wrong.
+# Copy everything this run prints to a log of its own in the target user's home
+# (~/pixflat-theme-DATE-TIME.log, without colours), after a header describing
+# the system, so that a run can be reviewed or shared when something looks
+# wrong.
 _start_log() {
-	local log=${S_HOME:-$HOME}/$APP_NAME.log
+	local log
+	printf -v log '%s/%s-%(%Y%m%d-%H%M%S)T.log' "${S_HOME:-$HOME}" "$APP_NAME" -1
 	{ : >>"$log"; } 2>/dev/null || return 0
 	if (( EUID == 0 )) && [[ -n $S_UID ]]; then chown "$S_UID" "$log" 2>/dev/null || true; fi
 	{
@@ -3350,7 +3406,9 @@ _start_log() {
 			lpplug-menu pishutdown gui-runcmd network-manager network-manager-applet network-manager-gnome bluez \
 			lightdm lightdm-gtk-greeter "$APP_PKG" 2>/dev/null | awk '$1 ~ /^.i/ { print $2 }' | paste -sd' ' -)"
 	} >>"$log"
-	exec > >(tee -a >(sed -u 's/\x1b\[[0-9;]*m//g' >>"$log")) 2>&1
+	# Every line is written with the date and time, without colours
+	exec > >(tee -a >(sed -u 's/\x1b\[[0-9;]*m//g' \
+		| while IFS= read -r line; do printf '%(%Y-%m-%d %H:%M:%S)T  %s\n' -1 "$line"; done >>"$log")) 2>&1
 	LOG_FILE=$log
 }
 
@@ -3373,6 +3431,7 @@ _log_state() {
 		[[ -f $f ]] || continue
 		v=$(grep -h '^[ \t]*type=' "$f" | sed 's/^[ \t]*type=//' | paste -sd' ' - || true)
 		log "    panel      $f:"
+		log "               $(grep -hE '^[ \t]*(height|iconsize|edge|width)=' "$f" | tr -d ' \t' | paste -sd' ' - || true)"
 		log "               ${v:-no plugins}"
 	done
 	v=$(pgrep -a -u "${S_UID:-$UID}" -x 'lxpanel|lxpanel-pi' 2>/dev/null | paste -sd'; ' - || true)
@@ -3434,6 +3493,7 @@ main() {
 	if (( O_DO_INSTALL || (applied && O_LIGHTDM) )); then
 		prepare_root
 		install_local_pkg
+		if (( O_LIGHTDM )); then install_greeter_conf; fi
 	fi
 	if (( applied )); then run_user_phase apply_main; fi
 

@@ -132,6 +132,21 @@ Size: 72048
 SHA256: a6c9edc2ad5ebe0db9534d0a7f15efe58739a38b65204992da67594a1c87a717
 Description: clearlookspix theme for GTK+ 2.x
 
+Package: pi-greeter
+Version: 0.25
+Architecture: armhf
+Depends: libc6 (>= 2.34), libcairo2 (>= 1.2.4), libgdk-pixbuf-2.0-0 (>= 2.22.0), libglib2.0-0 (>= 2.30.0), libgtk-3-0 (>= 3.21.4), libgtk-layer-shell0 (>= 0.1.0), liblightdm-gobject-1-0 (>= 1.8.7), libx11-6
+Recommends: desktop-base, gnome-themes-standard, gnome-icon-theme-symbolic, policykit-1
+Installed-Size: 366
+Maintainer: Simon Long <simon@raspberrypi.org>
+Section: x11
+Priority: optional
+Multi-Arch: no
+Filename: pool/greeter/pi-greeter_0.25_armhf.deb
+Size: 50196
+SHA256: 25ec1b1f6c20898aace361d9ccc46d696ec25e5dad6808b5a504796bb5b5f0cb
+Description: GTK greeter for Raspberry Pi
+
 Package: pixtrix-theme
 Version: 0.6
 Architecture: armhf
@@ -281,4 +296,34 @@ Filename: pool/engines/libgdk-pixbuf2.0-0_2.40.2-2_armhf.deb
 Size: 14144
 SHA256: e028fa1a3661042fe06b621da238f972ce3d8ffcdb0b8ef68f0a5de34679e842
 Description: GDK Pixbuf library (transitional package)
+
+Package: libgtk-layer-shell0
+Version: 0.8.0-1
+Architecture: armhf
+Depends: libc6 (>= 2.4), libglib2.0-0 (>= 2.41.2), libgtk-3-0 (>= 3.21.4), libwayland-client0 (>= 1.20.0)
+Installed-Size: 194
+Maintainer: Debian+Ubuntu MATE Packaging Team <debian-mate@lists.debian.org>
+Section: libs
+Priority: optional
+Multi-Arch: no
+Source: gtk-layer-shell
+Filename: pool/dependencies/libgtk-layer-shell0_0.8.0-1_armhf.deb
+Size: 41524
+SHA256: 70631ad0014f4db5ac51b5680f0ecb4279d586cd3cfa00b0191bb271261aa654
+Description: Wayland Layer Shell protocol desktop component library
+
+Package: liblightdm-gobject-1-0
+Version: 1.26.0-8
+Architecture: armhf
+Depends: libc6 (>= 2.4), libglib2.0-0 (>= 2.37.3), libx11-6, libxklavier16 (>= 5.0)
+Installed-Size: 117
+Maintainer: Debian Xfce Maintainers <debian-xfce@lists.debian.org>
+Section: libs
+Priority: optional
+Multi-Arch: same
+Source: lightdm
+Filename: pool/dependencies/liblightdm-gobject-1-0_1.26.0-8_armhf.deb
+Size: 58060
+SHA256: 1a94fbe211ab76f8d1eebb85bd4ca95fc5951f8027ac0f89281c7f15ce1c762a
+Description: simple display manager (GObject library)
 

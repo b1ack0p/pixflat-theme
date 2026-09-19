@@ -133,6 +133,21 @@ Size: 69232
 SHA256: ff728d7b839b9f5256f11ea103eef4e48f7503f40c6b4bb367a6a1bca61cde55
 Description: clearlookspix theme for GTK+ 2.x
 
+Package: pi-greeter
+Version: 1.3
+Architecture: arm64
+Depends: libc6 (>= 2.34), libcairo2 (>= 1.2.4), libgdk-pixbuf-2.0-0 (>= 2.22.0), libglib2.0-0t64 (>= 2.30.0), libgtk-3-0t64 (>= 3.21.4), libgtk-layer-shell0 (>= 0.1.0), liblightdm-gobject-1-0 (>= 1.8.7), libx11-6, lightdm
+Recommends: polkitd, pkexec
+Installed-Size: 390
+Maintainer: Simon Long <simon@raspberrypi.org>
+Section: x11
+Priority: optional
+Multi-Arch: no
+Filename: pool/greeter/pi-greeter_1.3_arm64.deb
+Size: 48760
+SHA256: b6fd03bd7f380f0b9a8c56458857966e6483103106e9f6941f1153ae0cb7aa41
+Description: GTK greeter for Raspberry Pi
+
 Package: pixtrix-theme
 Version: 0.6
 Architecture: arm64
@@ -428,6 +443,21 @@ Filename: pool/panel/debian-reference-en_2.127_all.deb
 Size: 1747040
 SHA256: 81d62f642c571dd5ad2de4aa56ba953c488fc9a0aaf0336dc4ef120ff9e367ce
 Description: Debian system administration guide, English original
+
+Package: libgtk-layer-shell0
+Version: 0.9.0-2
+Architecture: arm64
+Depends: libc6 (>= 2.17), libglib2.0-0t64 (>= 2.42.0), libgtk-3-0t64 (>= 3.24.48), libwayland-client0 (>= 1.20.0)
+Installed-Size: 326
+Maintainer: Debian+Ubuntu MATE Packaging Team <debian-mate@lists.debian.org>
+Section: libs
+Priority: optional
+Multi-Arch: no
+Source: gtk-layer-shell
+Filename: pool/dependencies/libgtk-layer-shell0_0.9.0-2_arm64.deb
+Size: 51736
+SHA256: 3bef0679bba2a99431b881cfe2792d9f2759d3f8d113e7fa702929bddcd9e62c
+Description: Wayland Layer Shell protocol desktop component library
 
 Package: libgtk2.0-0t64
 Version: 2.24.33-7
