@@ -402,12 +402,13 @@ _bundle_rpi_pkgs() {
 	fi
 }
 # Raspberry Pi's own panel (Debian 13 and later) with the plugins that work on
-# Debian, and its Shutdown dialog (log out, reboot, shut down), shown at the
-# end of the menu. Left out: updater and power (need Raspberry Pi system tools
-# or hardware) and network (nm-applet shows the same icons in the tray).
+# Debian, its Shutdown dialog (log out, reboot, shut down; at the end of the
+# menu) and its Run dialog (in Accessories). Left out: updater and power (need
+# Raspberry Pi system tools or hardware) and network (needs a Raspberry Pi
+# rebuild of a Debian library; nm-applet shows the same icons in the tray).
 _pi_panel_pkgs() {
 	printf '%s\n' lxpanel-pi lpplug-menu lpplug-volumepulse lpplug-bluetooth lpplug-magnifier \
-		lpplug-ejecter pplug-ejecter-data lpplug-clock lpplug-batt pishutdown
+		lpplug-ejecter pplug-ejecter-data lpplug-clock lpplug-batt pishutdown gui-runcmd
 }
 
 # Debian packages the themes need; the builder adds their missing dependencies.
@@ -1415,7 +1416,21 @@ EOF
 		printf '#!/bin/sh\nset -e\nif [ "$1" = configure ] && command -v gtk-update-icon-cache >/dev/null; then\n'
 		for f in "${icons[@]}"; do printf '\tgtk-update-icon-cache -q -t -f /usr/share/icons/%s || true\n' "$f"; done
 		printf '\t:\nfi\n'
+		# Raspberry Pi's panel reads the application menu only when it starts:
+		# restart running panels when packages add or remove applications.
+		cat <<'EOF_TRIG'
+if [ "$1" = triggered ] && command -v pgrep >/dev/null; then
+	for pid in $(pgrep -x lxpanel-pi || true); do
+		u=$(ps -o user= -p "$pid" | tr -d ' ')
+		d=$( { tr '\0' '\n' <"/proc/$pid/environ"; } 2>/dev/null | sed -n 's/^DISPLAY=//p')
+		x=$( { tr '\0' '\n' <"/proc/$pid/environ"; } 2>/dev/null | sed -n 's/^XAUTHORITY=//p')
+		[ -n "$u" ] && [ -n "$d" ] || continue
+		runuser -u "$u" -- env DISPLAY="$d" ${x:+XAUTHORITY=$x} lxpanelctl-pi restart >/dev/null 2>&1 || true
+	done
+fi
+EOF_TRIG
 	} >"$stage/DEBIAN/postinst"
+	printf 'interest-noawait /usr/share/applications\n' >"$stage/DEBIAN/triggers"
 	{
 		printf '#!/bin/sh\nset -e\nif [ "$1" = remove ] || [ "$1" = purge ]; then\n'
 		for f in "${icons[@]}"; do
@@ -1599,18 +1614,22 @@ _prime_apt_cache() {
 	done
 }
 
-# Record newly installed packages for --uninstall. Libraries, engines and,
-# offline, every dependency are marked automatic, as APT marks the
-# dependencies it installs itself, so 'apt autoremove' removes them once unused.
+# Record newly installed packages for --uninstall. Only packages that another
+# installed package depends on are marked automatic (the GTK 2 engines and
+# runtime the themes and icons depend on and, offline, every dependency), as
+# APT marks the dependencies it installs itself. Everything else, such as the
+# panel plugins, fallback icons, fonts and sounds, which nothing depends on,
+# stays manual, so 'apt autoremove' never removes it.
 _record_installed() {
 	local p newly=() autos=()
 	for p; do
 		(( O_DRY_RUN )) || [[ -n $(_installed_version "$p") ]] || continue
 		newly+=("$p")
-		case $p in gtk2-engines-*|libgtk2.0-*|libgdk-pixbuf*|gnome-icon-theme|adwaita-icon-theme*|fonts-liberation*|sound-theme-*|lpplug-*|pplug-*) autos+=("$p") ;;
+		case $p in gtk2-engines-*|libgtk2.0-*|libgdk-pixbuf*) autos+=("$p") ;;
 			*) if [[ " ${DEP_PKGS[*]} " == *" $p "* ]]; then autos+=("$p"); fi ;;
 		esac
 	done
+	_fix_auto_marks
 	(( ${#newly[@]} )) || return 0
 	if (( ${#autos[@]} )); then as_root apt-mark auto "${autos[@]}" >/dev/null; fi
 	as_root mkdir -p "$APP_SYS_STATE"
@@ -1618,6 +1637,17 @@ _record_installed() {
 	{ cat "$APP_SYS_STATE/installed-packages" 2>/dev/null || true; printf '%s\n' "${newly[@]}"; } \
 		| sort -u | as_root tee "$APP_SYS_STATE/installed-packages.new" >/dev/null
 	as_root mv -f "$APP_SYS_STATE/installed-packages.new" "$APP_SYS_STATE/installed-packages"
+}
+
+# Version 2.0.0 marked packages automatic that nothing depends on, so 'apt
+# autoremove' offered to remove them. Mark those this script installed manual.
+_fix_auto_marks() {
+	local -a fix=()
+	[[ -f $APP_SYS_STATE/installed-packages ]] || return 0
+	mapfile -t fix < <(apt-mark showauto 2>/dev/null \
+		| grep -xE 'lpplug-.*|pplug-.*|gnome-icon-theme|adwaita-icon-theme-legacy|fonts-liberation2?|sound-theme-freedesktop' \
+		| grep -xF -f "$APP_SYS_STATE/installed-packages" || true)
+	if (( ${#fix[@]} )); then as_root apt-mark manual "${fix[@]}" >/dev/null; fi
 }
 
 # Print the state of a resolved package on this system: new, an update, or
@@ -1742,7 +1772,7 @@ install_local_pkg() {
 _pkg_category() {
 	case $1 in
 		sound-theme-*)               echo sounds ;;
-		lxpanel-pi|lpplug-*|pplug-*|pishutdown|network-manager-gnome|network-manager-applet|nm-connection-editor|blueman) echo panel ;;
+		lxpanel-pi|lpplug-*|pplug-*|pishutdown|gui-runcmd|network-manager-gnome|network-manager-applet|nm-connection-editor|blueman) echo panel ;;
 		*icon-theme*|*-icons)        echo icons ;;
 		*-theme)                     echo themes ;;
 		fonts-*)                     echo fonts ;;
@@ -2262,6 +2292,39 @@ _hide_extra_applets() {
 	done
 }
 
+# Bind the Openbox keys of Raspberry Pi OS (rpd-x-core rpd-rc.xml) that control
+# Raspberry Pi's panel: menu, Run and Shutdown dialogs, Bluetooth, magnifier
+# and volume. Debian's bindings for these keys call lxpanelctl, which that
+# panel does not answer; a key the user has bound to something else is kept.
+# Usage: _pi_panel_keys RC-XML
+_pi_panel_keys() {
+	local file=$1 k c
+	local -a keys=(
+		"Super_L|lxpanelctl-pi command smenu menu"   "C-Escape|lxpanelctl-pi command smenu menu"
+		"A-F1|lxpanelctl-pi command smenu menu"      "A-F2|gui-runcmd"   "W-r|gui-runcmd"
+		"C-A-End|pishutdown"   "C-A-Delete|pishutdown"
+		"C-A-B|lxpanelctl-pi command bluetooth menu" "C-A-M|lxpanelctl-pi command magnifier toggle"
+		"XF86AudioRaiseVolume|lxpanelctl-pi command volumepulse volu"
+		"XF86AudioLowerVolume|lxpanelctl-pi command volumepulse vold"
+		"XF86AudioMute|lxpanelctl-pi command volumepulse mute"
+	)
+	if (( O_DRY_RUN )); then log "   [dry-run] $file: Raspberry Pi OS panel keys"; return 0; fi
+	_track_file "$file"
+	for k in "${keys[@]}"; do
+		c=${k#*|} k=${k%%|*}
+		K=$k C=$c awk '
+			function flush() { if (blk ~ /lxpanelctl[ <]/ || blk ~ /amixer|pactl|wpctl/) print nb; else print blk; done = 1 }
+			BEGIN {
+				k = "<keybind key=\"" ENVIRON["K"] "\""
+				nb = "    <keybind key=\"" ENVIRON["K"] "\">\n      <action name=\"Execute\">\n        <command>" ENVIRON["C"] "</command>\n      </action>\n    </keybind>"
+			}
+			!done && index($0, k) { blk = $0; inb = 1; if ($0 ~ /<\/keybind>/) { inb = 0; flush() }; next }
+			inb { blk = blk "\n" $0; if ($0 ~ /<\/keybind>/) { inb = 0; flush() }; next }
+			!done && /<\/keyboard>/ { print nb; done = 1 }
+			{ print }' "$file" | _write "$file"
+	done
+}
+
 # Start the given panel program in the LXDE session instead of the current one.
 # Usage: _lxsession_panel SESSION PROGRAM
 _lxsession_panel() {
@@ -2594,7 +2657,10 @@ apply_de_lxde() {
 			_lxpanel_write "$HOME/.config/lxpanel/$sess/panels/panel"
 		fi
 		_lxde_menu_write
+	elif (( O_PANEL )) && grep -qF "<!-- $APP_NAME:" "$HOME/.config/menus/lxde-applications.menu" 2>/dev/null; then
+		_lxde_menu_write   # still the installer's menu (not edited by a menu editor): keep it current
 	fi
+	if (( O_PANEL && O_PI_PANEL )) && [[ -f $rc ]]; then _pi_panel_keys "$rc"; fi
 	if (( O_PANEL )); then _hide_extra_applets; fi
 	if [[ -n ${DISPLAY:-} ]]; then
 		if _running openbox; then run openbox --reconfigure || true; fi
@@ -3068,6 +3134,8 @@ choose_look() {
 	done
 	(( ${#ids[@]} )) || die "no Raspberry Pi OS theme is installed; run $(_self_cmd) without --apply-only"
 	for id in pixflat pixtrix pix; do
+		# The legacy PiX icons lack the icons and sizes of Raspberry Pi's panel
+		(( O_PI_PANEL )) && [[ $id == pix ]] && continue
 		if _have_pkg "$(_icons_pkg "$id")"; then icons+=("$id"); fi
 	done
 
@@ -3089,7 +3157,7 @@ choose_look() {
 	fi
 
 	if [[ -n $O_ICONS ]]; then
-		[[ " ${icons[*]} " == *" $O_ICONS "* ]] || die "icon set $O_ICONS is not installed (installed: ${icons[*]})"
+		[[ " ${icons[*]} " == *" $O_ICONS "* ]] || die "icon set $O_ICONS is not available (available: ${icons[*]})"
 	elif (( O_INTERACTIVE && ${#icons[@]} > 1 )); then
 		set_theme "$O_THEME"
 		step "Select the icons and cursors"
@@ -3104,6 +3172,9 @@ choose_look() {
 		done
 		_menu "Icons" "$def" 0 "${items[@]}"
 		O_ICONS=${icons[REPLY]}
+	fi
+	if [[ $O_THEME == pix && -z $O_ICONS ]] && (( O_PI_PANEL && ${#icons[@]} )); then
+		O_ICONS=${icons[0]}   # the PiX theme with icons that fit Raspberry Pi's panel
 	fi
 	set_theme "$O_THEME"
 }

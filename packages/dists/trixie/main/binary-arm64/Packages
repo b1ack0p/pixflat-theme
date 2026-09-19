@@ -352,6 +352,20 @@ Size: 24620
 SHA256: ebff08a166a7a05210f76d57390d3d17b14b64c8107cc788e65a16659ab35991
 Description: Desktop shutdown helper for Raspberry Pi
 
+Package: gui-runcmd
+Version: 0.3
+Architecture: arm64
+Depends: libc6 (>= 2.34), libglib2.0-0t64 (>= 2.32.0), libgtk-3-0t64 (>= 3.24), libmenu-cache3 (>= 0.3.2), libwayland-client0 (>= 1.20.0)
+Installed-Size: 282
+Maintainer: Simon Long <simon@raspberrypi.com>
+Section: utils
+Priority: optional
+Multi-Arch: no
+Filename: pool/panel/gui-runcmd_0.3_arm64.deb
+Size: 25950
+SHA256: b6822b16e377160b8cd19e5612a22ea6fe7edb4cbb0356e2b9aa3c8608a34088
+Description: GUI command-line application launcher for Raspberry Pi
+
 Package: rpd-common
 Version: 1.30
 Architecture: arm64

@@ -1,6 +1,6 @@
 # Package versions
 
-Built by `install-offline.sh --update-packages` (pixflat-theme 2.0.0) on 2026-09-19 16:57 UTC from
+Built by `install-offline.sh --update-packages` (pixflat-theme 2.0.0) on 2026-09-19 19:39 UTC from
 https://archive.raspberrypi.org/debian and https://deb.debian.org/debian. Every file is listed in `SHA256SUMS`.
 
 | Package | Version | Releases | Source |
@@ -28,6 +28,7 @@ https://archive.raspberrypi.org/debian and https://deb.debian.org/debian. Every 
 | gtk2-engines-pixbuf | 2.24.33-7 | trixie | Debian |
 | gtk2-engines-pixflat | 0.5+b1 | trixie | Raspberry Pi OS |
 | gtk2-engines-pixflat | 0.5 | bookworm | Raspberry Pi OS |
+| gui-runcmd | 0.3 | trixie | Raspberry Pi OS |
 | libayatana-appindicator3-1 | 0.5.92-1 | bookworm | Debian |
 | libayatana-appindicator3-1 | 0.5.94-1 | trixie | Debian |
 | libdbusmenu-glib4 | 18.10.20180917~bzr492+repack1-3 | bookworm | Debian |

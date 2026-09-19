@@ -68,7 +68,10 @@ Change the look at any time without downloading anything:
 
 Your desktop's appearance settings (e.g. LXAppearance, Xfce Appearance) also list
 the installed themes, but change only the GTK theme and icons. `--apply-only`
-switches the whole look.
+switches the whole look. If you pick icons there, choose **PiXflat (Debian)** or
+**PiXtrix (Debian)**: the plain PiXflat and PiXtrix entries are the unmodified
+official sets, without the Debian logo, the extra cursors and the notification
+icon names Debian's applets use.
 
 Use `--only NAME` to install a single theme family instead, and `--4k` for the 4K
 (3840×2160) wallpaper sets.
@@ -100,8 +103,8 @@ and PiX, Nunito Sans for PiXtrix and PiXonyx.
 The values are the ones Raspberry Pi OS itself uses, taken from its
 configuration packages (`raspberrypi-ui-mods` for Bookworm, `rpd-common`,
 `rpd-x-core` and `rpd-wayland-core` for Trixie). Debian's own programs are used,
-except on Debian 13 with LXDE, where Raspberry Pi's own panel and Shutdown
-dialog are installed (they are built for Debian 13). Raspberry Pi's modified
+except on Debian 13 with LXDE, where Raspberry Pi's own panel and its Shutdown
+and Run dialogs are installed (they are built for Debian 13). Raspberry Pi's modified
 file manager and system tools are never installed.
 
 | Area | Raspberry Pi OS settings applied |
@@ -110,12 +113,12 @@ file manager and system tools are never installed.
 | Rendering and sizes | antialiasing, full hinting, RGB subpixel order; cursor 24 px; toolbar icons 24 px with text beside; no icons in menus and buttons |
 | Windows (Openbox, labwc) | theme, title bar with title, minimise, maximise and close (no window menu), round corners and invisible resize handles (Openbox), one desktop, window placement; labwc also drop shadows, window snapping and the window switcher layout |
 | Scaling | Raspberry Pi OS sets no DPI or scale factor, so neither does the installer: your display scaling is kept |
-| Panel (LXDE, Debian 13) | **Raspberry Pi's own panel** (`lxpanel-pi`) with its plugins: menu (Debian logo), launchers for web browser, file manager and terminal, taskbar, tray, eject, Bluetooth, volume, clock, battery (laptops) and magnifier, in the Raspberry Pi OS order and geometry (top, 36 px, 36 px icons, theme colours); Raspberry Pi's Shutdown dialog (`pishutdown`: log out, reboot, shut down) at the end of the menu |
+| Panel (LXDE, Debian 13) | **Raspberry Pi's own panel** (`lxpanel-pi`) with its plugins: menu (Debian logo), launchers for web browser, file manager and terminal, taskbar, tray, eject, Bluetooth, volume, clock, battery (laptops) and magnifier, in the Raspberry Pi OS order and geometry (top, 36 px, 36 px icons, theme colours); Raspberry Pi's Shutdown dialog (`pishutdown`: log out, reboot, shut down) at the end of the menu and its Run dialog (`gui-runcmd`) in Accessories; the Raspberry Pi OS keys: Super or Ctrl+Esc for the menu, Alt+F2 to run, Ctrl+Alt+Del for Shutdown, Ctrl+Alt+B for Bluetooth, Ctrl+Alt+M for the magnifier, the volume keys. The menu is reloaded whenever packages add or remove applications (Raspberry Pi's panel reads it only when it starts). The legacy PiX icons lack this panel's icons, so they are not offered with it |
 | Panel (LXDE, Debian 12) | Debian's panel with the same layout and geometry: menu (Debian logo), launchers, taskbar, tray, volume, clock (`HH:MM`), battery (laptops) |
 | Notification icons | the Raspberry Pi OS icons for sound, network and Bluetooth: Debian's volume plugin, `nm-applet` and `blueman` show the same images as the Raspberry Pi panel plugins (Wi-Fi strength, wired, offline, connecting, VPN, Bluetooth on/off); secured connections show the plain signal icon, as in Raspberry Pi OS |
 | Tray applets (LXDE) | `nm-applet` for the network icon is installed if NetworkManager is; `blueman` for Bluetooth if BlueZ is, on Debian 12 (the Raspberry Pi panel on Debian 13 has its own Bluetooth plugin). Tray applets Raspberry Pi OS does not show (clipboard managers such as Diodon, other volume applets, `blueman` with the Raspberry Pi panel) are hidden once for your user, not removed; enable one again in *Desktop Session Settings* and it stays |
 | Login screen | when Debian's LightDM GTK greeter is installed (`--no-lightdm` to skip): the Raspberry Pi OS login screen with Debian's greeter: its wallpaper (the dark one with PiXnoir and PiXonyx), centred login box, user list, theme, icons, cursor and font, and the Debian logo as the default user picture |
-| Application menu (LXDE) | Raspberry Pi OS categories and order: Programming, Education, Science, Office, Internet, Sound & Video, Graphics, Games, Other, System Tools, Accessories, then Help and Preferences, and the Shutdown entry last; empty categories are hidden until an application of that category is installed |
+| Application menu (LXDE) | Raspberry Pi OS categories and order: Programming, Education, Science, Office, Internet, Sound & Video, Graphics, Games, Other, System Tools, Accessories, then Help and Preferences, and the Shutdown entry last; empty categories are hidden until an application of that category is installed. The menu is kept up to date by later runs unless you edit it with a menu editor |
 | File manager (PCManFM) | 943×653 window, folder tree side pane, icon view with thumbnails, new tab/navigation/home toolbar, status bar; icons 48 px, small and side pane icons 24 px, thumbnails 80 px; places: home, root and drives |
 | Desktop | wallpaper, desktop colours and font, trash and drive icons, no documents icon |
 | Sounds | event and input feedback sounds with the freedesktop sound theme |
@@ -267,7 +270,7 @@ The installer follows [DontBreakDebian](https://wiki.debian.org/DontBreakDebian)
 * **No FrankenDebian:** no Raspberry Pi (or any other) APT source is added. Only
   individual, verified leaf packages are installed: themes, icons, fonts,
   wallpapers, GTK 2 theme engines and, on Debian 13 with LXDE, Raspberry Pi's
-  panel, its plugins and its Shutdown dialog.
+  panel, its plugins and its Shutdown and Run dialogs.
 * **Nothing from Debian is replaced:** the installer refuses any Raspberry Pi
   package whose name also exists in your APT sources. Packages the Raspberry Pi
   archive rebuilds from Debian (such as `gtk2-engines-pixbuf +rpt1`) are never
@@ -277,9 +280,10 @@ The installer follows [DontBreakDebian](https://wiki.debian.org/DontBreakDebian)
   replace newer ones.
 * **Everything is tracked by dpkg:** no `make install`, no files copied into
   system directories. The generated `pixflat-theme-debian` package only adds files
-  under `/usr/share` and is removed cleanly with APT. Libraries and engines pulled
-  in as dependencies are marked automatic (offline too), so `apt autoremove`
-  cleans them up.
+  under `/usr/share` and is removed cleanly with APT. Only packages that another
+  installed package depends on (GTK 2 engines and runtime; offline, every
+  dependency) are marked automatic, so `apt autoremove` cleans them up once unused
+  and never removes the panel plugins, icons, fonts or sounds.
 * **Only official sources:** downloads are limited to `https://archive.raspberrypi.org/`
   and `https://deb.debian.org/`; any other address, plain HTTP and redirects are
   refused. Before installing, the installer checks where APT would take each
@@ -304,7 +308,7 @@ packages/
 │   ├── icons/        pixflat-icons, pixtrix-icons, rpd-icons, gnome-icon-theme, adwaita-icon-theme-legacy
 │   ├── fonts/        fonts-piboto, fonts-nunito-sans, fonts-liberation
 │   ├── sounds/       sound-theme-freedesktop
-│   ├── panel/        lxpanel-pi, plugins and pishutdown (Debian 13), nm-applet, blueman (Debian 12)
+│   ├── panel/        lxpanel-pi, plugins, pishutdown, gui-runcmd (Debian 13), nm-applet, blueman (Debian 12)
 │   ├── dependencies/ libraries the panel and applets need that a standard LXDE desktop lacks
 │   ├── engines/      GTK 2 engines and runtime: gtk2-engines-*, libgtk2.0-*, libgdk-pixbuf*
 │   └── wallpapers/   rpd-wallpaper, rpd-wallpaper-trixie, their 4K sets, and rpd-common
@@ -376,7 +380,7 @@ package files in [`pool/main/`](https://archive.raspberrypi.org/debian/pool/main
 | Icons and cursors | [pixflat-icons](https://archive.raspberrypi.org/debian/pool/main/p/pixflat-icons/), [pixtrix-icons](https://archive.raspberrypi.org/debian/pool/main/p/pixtrix-icons/), [rpd-icons](https://archive.raspberrypi.org/debian/pool/main/r/rpd-icons/) |
 | GTK 2 engines | [gtk2-engines-pixflat](https://archive.raspberrypi.org/debian/pool/main/g/gtk2-engines-pixflat/), [gtk2-engines-clearlookspix](https://archive.raspberrypi.org/debian/pool/main/g/gtk2-engines-clearlookspix/) |
 | Fonts | [fonts-piboto](https://archive.raspberrypi.org/debian/pool/main/f/fonts-piboto/), [fonts-nunito-sans](https://archive.raspberrypi.org/debian/pool/main/f/fonts-nunito-sans/) |
-| Panel (Debian 13) | [lxpanel-pi](https://archive.raspberrypi.org/debian/pool/main/l/lxpanel-pi/), plugins [menu](https://archive.raspberrypi.org/debian/pool/main/p/pplug-menu/), [volume](https://archive.raspberrypi.org/debian/pool/main/p/pplug-volumepulse/), [Bluetooth](https://archive.raspberrypi.org/debian/pool/main/p/pplug-bluetooth/), [eject](https://archive.raspberrypi.org/debian/pool/main/p/pplug-ejecter/), [clock](https://archive.raspberrypi.org/debian/pool/main/p/pplug-clock/), [battery](https://archive.raspberrypi.org/debian/pool/main/p/pplug-batt/), [magnifier](https://archive.raspberrypi.org/debian/pool/main/l/lpplug-magnifier/), Shutdown dialog [pishutdown](https://archive.raspberrypi.org/debian/pool/main/p/pishutdown/) |
+| Panel (Debian 13) | [lxpanel-pi](https://archive.raspberrypi.org/debian/pool/main/l/lxpanel-pi/), plugins [menu](https://archive.raspberrypi.org/debian/pool/main/p/pplug-menu/), [volume](https://archive.raspberrypi.org/debian/pool/main/p/pplug-volumepulse/), [Bluetooth](https://archive.raspberrypi.org/debian/pool/main/p/pplug-bluetooth/), [eject](https://archive.raspberrypi.org/debian/pool/main/p/pplug-ejecter/), [clock](https://archive.raspberrypi.org/debian/pool/main/p/pplug-clock/), [battery](https://archive.raspberrypi.org/debian/pool/main/p/pplug-batt/), [magnifier](https://archive.raspberrypi.org/debian/pool/main/l/lpplug-magnifier/), Shutdown dialog [pishutdown](https://archive.raspberrypi.org/debian/pool/main/p/pishutdown/), Run dialog [gui-runcmd](https://archive.raspberrypi.org/debian/pool/main/g/gui-runcmd/) |
 | Wallpapers | [rpd-wallpaper](https://archive.raspberrypi.org/debian/pool/main/r/rpd-wallpaper/), [rpd-wallpaper-4k](https://archive.raspberrypi.org/debian/pool/main/r/rpd-wallpaper-4k/), [rpd-wallpaper-trixie](https://archive.raspberrypi.org/debian/pool/main/r/rpd-wallpaper-trixie/), [rpd-wallpaper-trixie-4k](https://archive.raspberrypi.org/debian/pool/main/r/rpd-wallpaper-trixie-4k/); login screen wallpaper from [rpd-common](https://archive.raspberrypi.org/debian/pool/main/r/rpd-metas/) (unpacked, not installed; BSD-3-Clause) |
 
 The desktop settings (fonts, colours, panel and window layout) are the values from
