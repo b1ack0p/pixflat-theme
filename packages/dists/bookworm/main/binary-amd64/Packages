@@ -1,0 +1,270 @@
+Package: pixflat-theme
+Version: 0.24
+Architecture: amd64
+Depends: gtk2-engines-pixbuf, gtk2-engines-pixflat
+Breaks: raspberrypi-ui-mods (<< 1.20231122)
+Replaces: raspberrypi-ui-mods (<< 1.20231122)
+Installed-Size: 453
+Maintainer: Simon Long <simon@raspberrypi.com>
+Section: x11
+Priority: optional
+Multi-Arch: no
+Filename: pool/themes/pixflat-theme_0.24_amd64.deb
+Size: 92284
+SHA256: 56e518b2321a1784b39566885df595661b99781b26e439dd09a6ba1d56858c66
+Description: PiXflat theme for Raspberry Pi desktop
+
+Package: pixflat-icons
+Version: 0.28
+Architecture: all
+Depends: libgtk2.0-bin
+Installed-Size: 5699
+Maintainer: Simon Long <simon@raspberrypi.org>
+Section: x11
+Priority: optional
+Multi-Arch: no
+Filename: pool/icons/pixflat-icons_0.28_all.deb
+Size: 1331852
+SHA256: 6a5bf9664c2f7280d995368c742d28d320487a1b739753c40b576fba12f92d11
+Description: Icons for Raspberry Pi Desktop
+
+Package: gtk2-engines-pixflat
+Version: 0.5
+Architecture: amd64
+Depends: libc6 (>= 2.4), libcairo2 (>= 1.2.4), libgdk-pixbuf-2.0-0 (>= 2.22.0), libglib2.0-0 (>= 2.37.3), libgtk2.0-0 (>= 2.19.7-2)
+Installed-Size: 114
+Maintainer: Simon Long <simon@raspberrypi.org>
+Section: x11
+Priority: optional
+Multi-Arch: same
+Filename: pool/engines/gtk2-engines-pixflat_0.5_amd64.deb
+Size: 38256
+SHA256: d63fdc447ff6899aa6adf1515f06bd8f54a450b163f096e7a309b2c896d266f1
+Description: PiXflat theme engine for GTK+ 2.x
+
+Package: fonts-piboto
+Version: 1.2
+Architecture: all
+Pre-Depends: dpkg (>= 1.15.6~)
+Installed-Size: 2229
+Maintainer: Debian Fonts Task Force <pkg-fonts-devel@lists.alioth.debian.org>
+Section: fonts
+Priority: optional
+Multi-Arch: foreign
+Filename: pool/fonts/fonts-piboto_1.2_all.deb
+Size: 535456
+SHA256: ae9418e029e654e2fbe9ce33768ea5985fa91441d1f8ac2cf7e015f0f2539fad
+Description: sans-serif font family released with Android Ice Cream Sandwich
+
+Package: rpd-wallpaper
+Version: 0.5
+Architecture: all
+Breaks: pixel-wallpaper (<< 0.3-1~)
+Replaces: pixel-wallpaper (<< 0.3-1~)
+Installed-Size: 27465
+Maintainer: Simon Long <simon@raspberrypi.org>
+Section: x11
+Priority: optional
+Multi-Arch: no
+Filename: pool/wallpapers/rpd-wallpaper_0.5_all.deb
+Size: 27612864
+SHA256: d5597090cf62fe0c9ad78d39401d9a2cb7975bca538a120195eb120623c1ec4e
+Description: Wallpaper for Raspberry Pi Desktop
+
+Package: rpd-wallpaper-4k
+Version: 0.1
+Architecture: all
+Installed-Size: 97963
+Maintainer: Simon Long <simon@raspberrypi.com>
+Section: x11
+Priority: optional
+Multi-Arch: no
+Filename: pool/wallpapers/rpd-wallpaper-4k_0.1_all.deb
+Size: 99773868
+SHA256: 593d9497e91b3b3aafa748d274e1d0569e32c473784c11a566784ba014a00356
+Description: 4K Wallpaper for Raspberry Pi Desktop
+
+Package: pix-theme
+Version: 0.1
+Architecture: amd64
+Depends: gtk2-engines-pixbuf, gtk2-engines-clearlookspix
+Breaks: raspberrypi-ui-mods (<< 1.20231122)
+Replaces: raspberrypi-ui-mods (<< 1.20231122)
+Installed-Size: 928
+Maintainer: Simon Long <simon@raspberrypi.com>
+Section: x11
+Priority: optional
+Multi-Arch: no
+Filename: pool/themes/pix-theme_0.1_amd64.deb
+Size: 246724
+SHA256: 91afcb2ddbb97275139e9a3223e977b6d77eefc8f0e625bb3db43aa0d37e217b
+Description: PiX theme for Raspberry Pi desktop
+
+Package: rpd-icons
+Version: 0.18
+Architecture: all
+Depends: libgtk2.0-bin
+Breaks: pix-icons (<< 0.5-1~)
+Replaces: pix-icons (<< 0.5-1~)
+Installed-Size: 3785
+Maintainer: Simon Long <simon@raspberrypi.org>
+Section: x11
+Priority: optional
+Multi-Arch: no
+Filename: pool/icons/rpd-icons_0.18_all.deb
+Size: 983026
+SHA256: a1f518807e102cc3074ac1de0cd258b4f0e3d163e1cc2eaf86f74439615bac5a
+Description: Icons for Raspberry Pi Desktop
+
+Package: gtk2-engines-clearlookspix
+Version: 1:2.20.8
+Architecture: amd64
+Depends: libatk1.0-0 (>= 1.12.4), libc6 (>= 2.4), libcairo2 (>= 1.2.4), libfontconfig1 (>= 2.12.6), libfreetype6 (>= 2.2.1), libgdk-pixbuf2.0-0 (>= 2.22.0), libglib2.0-0 (>= 2.37.3), libgtk2.0-0 (>= 2.19.7-2), libpango-1.0-0 (>= 1.14.0), libpangocairo-1.0-0 (>= 1.14.0), libpangoft2-1.0-0 (>= 1.14.0)
+Breaks: gnome-themes-extras (<< 2)
+Installed-Size: 214
+Maintainer: Serge Schneider <serge@raspberrypi.org>
+Section: gnome
+Priority: optional
+Multi-Arch: same
+Filename: pool/engines/gtk2-engines-clearlookspix_2.20.8_amd64.deb
+Size: 80088
+SHA256: 3f414c9ab1029809b77a02fb73abadbd60fc602c255f857aaa20471397f400d8
+Description: clearlookspix theme for GTK+ 2.x
+
+Package: fonts-liberation2
+Version: 2.1.5-1
+Architecture: all
+Installed-Size: 4290
+Maintainer: Debian Fonts Task Force <debian-fonts@lists.debian.org>
+Section: fonts
+Priority: optional
+Multi-Arch: foreign
+Filename: pool/fonts/fonts-liberation2_2.1.5-1_all.deb
+Size: 1479148
+SHA256: 35ffaa54f117e633e89a5da89af235a073b34dbe582726fbf6989568f7fd9bda
+Description: Fonts with the same metrics as Times, Arial and Courier (v2)
+
+Package: gnome-icon-theme
+Version: 3.12.0-5
+Architecture: all
+Depends: gtk-update-icon-cache, hicolor-icon-theme, librsvg2-common
+Enhances: nautilus (>= 2.2)
+Installed-Size: 15189
+Maintainer: Leonardo Rodrigues Pereira <leontecnicalonline@gmail.com>
+Section: gnome
+Priority: optional
+Multi-Arch: foreign
+Filename: pool/icons/gnome-icon-theme_3.12.0-5_all.deb
+Size: 9867072
+SHA256: 243520edcff2c309065b7e12ae08f666580e6098ecafa0c0f7d28c75aedcfdc3
+Description: This package contains the default icon theme used by the GNOME
+
+Package: gtk2-engines-pixbuf
+Version: 2.24.33-2+deb12u1
+Architecture: amd64
+Depends: libc6 (>= 2.14), libcairo2 (>= 1.6.4-6.1), libgdk-pixbuf-2.0-0 (>= 2.22.1), libglib2.0-0 (>= 2.27.3)
+Installed-Size: 78
+Maintainer: Debian GNOME Maintainers <pkg-gnome-maintainers@lists.alioth.debian.org>
+Section: graphics
+Priority: optional
+Multi-Arch: same
+Source: gtk+2.0
+Filename: pool/engines/gtk2-engines-pixbuf_2.24.33-2+deb12u1_amd64.deb
+Size: 22816
+SHA256: 16cc8481c37daf58f9d7df427ed66b78a408abd843f8feb09eb08560829444af
+Description: pixbuf-based theme for GTK 2
+
+Package: libgdk-pixbuf2.0-0
+Version: 2.40.2-2
+Architecture: amd64
+Depends: libgdk-pixbuf-2.0-0 (>= 2.40.0), libgdk-pixbuf-xlib-2.0-0 (>= 2.40.2-2)
+Installed-Size: 22
+Maintainer: Debian GNOME Maintainers <pkg-gnome-maintainers@lists.alioth.debian.org>
+Section: oldlibs
+Priority: optional
+Multi-Arch: same
+Source: gdk-pixbuf-xlib
+Filename: pool/engines/libgdk-pixbuf2.0-0_2.40.2-2_amd64.deb
+Size: 14144
+SHA256: 2e1988105dee8597fbb356aeb04cc9e2f9774626d0d2dbd18984d3a500f096c6
+Description: GDK Pixbuf library (transitional package)
+
+Package: libgdk-pixbuf-xlib-2.0-0
+Version: 2.40.2-2
+Architecture: amd64
+Depends: shared-mime-info, libc6 (>= 2.14), libgdk-pixbuf-2.0-0 (>= 2.40.0), libglib2.0-0 (>= 2.48.0), libx11-6
+Recommends: libgdk-pixbuf2.0-bin
+Breaks: libgdk-pixbuf2.0-0 (<< 2.40.0+dfsg-6~)
+Replaces: libgdk-pixbuf2.0-0 (<< 2.40.0+dfsg-6~)
+Installed-Size: 99
+Maintainer: Debian GNOME Maintainers <pkg-gnome-maintainers@lists.alioth.debian.org>
+Section: oldlibs
+Priority: optional
+Multi-Arch: same
+Source: gdk-pixbuf-xlib
+Filename: pool/engines/libgdk-pixbuf-xlib-2.0-0_2.40.2-2_amd64.deb
+Size: 47924
+SHA256: c11e9c92534e1e8036ad33a7ee1962b120834a02c41594cdf90ce01855ba84a4
+Description: GDK Pixbuf library (deprecated Xlib integration)
+
+Package: libgtk2.0-0
+Version: 2.24.33-2+deb12u1
+Architecture: amd64
+Depends: libgtk2.0-common, libatk1.0-0 (>= 1.32.0), libc6 (>= 2.34), libcairo2 (>= 1.6.4-6.1), libcups2 (>= 1.6.0), libfontconfig1 (>= 2.12.6), libgdk-pixbuf-2.0-0 (>= 2.22.1), libglib2.0-0 (>= 2.41.1), libpango-1.0-0 (>= 1.28.3), libpangocairo-1.0-0 (>= 1.28.3), libpangoft2-1.0-0 (>= 1.28.3), libx11-6 (>= 2:1.4.99.1), libxcomposite1 (>= 1:0.4.5), libxcursor1 (>> 1.1.2), libxdamage1 (>= 1:1.1), libxext6, libxfixes3, libxi6, libxinerama1 (>= 2:1.1.4), libxrandr2 (>= 2:1.5.0), libxrender1, adwaita-icon-theme | gnome-icon-theme, hicolor-icon-theme, shared-mime-info
+Recommends: libgail-common, librsvg2-common, libgtk2.0-bin
+Suggests: gvfs
+Provides: gtk2.0-binver-2.10.0
+Installed-Size: 5833
+Maintainer: Debian GNOME Maintainers <pkg-gnome-maintainers@lists.alioth.debian.org>
+Section: libs
+Priority: optional
+Multi-Arch: same
+Source: gtk+2.0
+Filename: pool/engines/libgtk2.0-0_2.24.33-2+deb12u1_amd64.deb
+Size: 1810632
+SHA256: d1e9a26a5961748f220c5989c89516fead2a5054b80914f94c71c3fee6fdebe3
+Description: GTK graphical user interface library - old version
+
+Package: libgtk2.0-bin
+Version: 2.24.33-2+deb12u1
+Architecture: amd64
+Depends: libgtk2.0-0 (= 2.24.33-2+deb12u1), libgtk2.0-common, gtk-update-icon-cache
+Installed-Size: 32
+Maintainer: Debian GNOME Maintainers <pkg-gnome-maintainers@lists.alioth.debian.org>
+Section: misc
+Priority: optional
+Multi-Arch: foreign
+Source: gtk+2.0
+Filename: pool/engines/libgtk2.0-bin_2.24.33-2+deb12u1_amd64.deb
+Size: 10852
+SHA256: 20149fa28e166dcef9e6653e8afd378bb0e826abe308bc929d3b874f95ab1993
+Description: programs for the GTK graphical user interface library
+
+Package: libgtk2.0-common
+Version: 2.24.33-2+deb12u1
+Architecture: all
+Recommends: libgtk2.0-0
+Installed-Size: 19884
+Maintainer: Debian GNOME Maintainers <pkg-gnome-maintainers@lists.alioth.debian.org>
+Section: misc
+Priority: optional
+Multi-Arch: foreign
+Source: gtk+2.0
+Filename: pool/engines/libgtk2.0-common_2.24.33-2+deb12u1_all.deb
+Size: 2659900
+SHA256: f55a9800d3721b1de246e4bfaf94a63ca50efdfa49eb5fa2362ed4fa79258299
+Description: common files for the GTK graphical user interface library
+
+Package: sound-theme-freedesktop
+Version: 0.8-2
+Architecture: all
+Installed-Size: 536
+Maintainer: Debian GNOME Maintainers <pkg-gnome-maintainers@lists.alioth.debian.org>
+Section: sound
+Priority: optional
+Multi-Arch: foreign
+Filename: pool/sounds/sound-theme-freedesktop_0.8-2_all.deb
+Size: 383752
+SHA256: 135cc4893ba590d428577bc3bf42df756a165c05a2a43f84311ad7db779a70ea
+Description: freedesktop.org sound theme
+
