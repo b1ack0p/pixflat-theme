@@ -2397,6 +2397,20 @@ window > image { background-color: @$bar; }"
 	_block_set "$HOME/.config/gtk-3.0/gtk.css" "$APP_NAME-panel" "$css"
 }
 
+# Raspberry Pi OS lists Debian Reference in the Help menu (its own copy of the
+# entry, in raspi-ui-overrides); Debian's entry says Accessories. Override it
+# for this user, so the Help menu holds what it holds on Raspberry Pi OS.
+_help_menu_entry() {
+	local src=/usr/share/applications/debian-reference-common.desktop f
+	[[ -f $src ]] || return 0
+	f=$HOME/.local/share/applications/${src##*/}
+	if (( O_DRY_RUN )); then log "   [dry-run] $f: Debian Reference in the Help menu"; return 0; fi
+	_track_file "$f"
+	awk '/^Categories=/ { print "Categories=Help;"; found = 1; next }
+		{ print }
+		END { if (!found) print "Categories=Help;" }' "$src" | _write "$f"
+}
+
 # Start the given panel program in the LXDE session instead of the current one.
 # Usage: _lxsession_panel SESSION PROGRAM
 _lxsession_panel() {
@@ -2759,6 +2773,7 @@ apply_de_lxde() {
 		_lxde_menu_write   # still the installer's menu (not edited by a menu editor): keep it current
 		ok "Application menu updated (Raspberry Pi OS categories, Run and Shutdown)"
 	fi
+	if (( O_PANEL )); then _help_menu_entry; fi
 	if (( O_PANEL && O_PI_PANEL )) && [[ -f $rc ]]; then _pi_panel_keys "$rc"; fi
 	if (( O_PANEL && O_PI_PANEL )); then _pi_panel_css; ok "Raspberry Pi panel style for $T_GTK applied (tray icons, buttons)"; fi
 	if (( O_PANEL )); then _hide_extra_applets; fi
