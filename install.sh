@@ -205,17 +205,19 @@ ${mode}
 
 Usage: ${self} [OPTIONS]
 
-Themes (-t):
-  pixflat   Light, Raspberry Pi OS Bookworm (PiXflat + Piboto)           [default]
+Detected automatically: Debian release, architecture, user and desktop.
+
+Themes (-t); the default is the look of the matching Raspberry Pi OS release:
+  pixflat   Light, Raspberry Pi OS Bookworm (PiXflat + Piboto)     default on Debian 12
   pixnoir   Dark,  Raspberry Pi OS Bookworm (PiXnoir + Piboto)
-  pixtrix   Light, Raspberry Pi OS Trixie   (PiXtrix + Nunito Sans)       Debian 13+
-  pixonyx   Dark,  Raspberry Pi OS Trixie   (PiXonyx + Nunito Sans)       Debian 13+
+  pixtrix   Light, Raspberry Pi OS Trixie   (PiXtrix + Nunito Sans) default on Debian 13+
+  pixonyx   Dark,  Raspberry Pi OS Trixie   (PiXonyx + Nunito Sans) Debian 13+
   pix       Legacy Raspberry Pi OS Buster/Bullseye look (PiX)
 
 Options:
   -t, --theme NAME        Theme to install and apply (see above).
-  -d, --desktop LIST      Desktops to configure: auto (default), all, none, or a
-                          comma list of: ${DE_SUPPORTED[*]}
+  -d, --desktop LIST      Desktops to configure instead of the detected one: all,
+                          none, or a comma list of: ${DE_SUPPORTED[*]}
   -u, --user NAME         User whose desktop is configured (default: the user
                           running the script, or \$SUDO_USER under sudo).
       --wallpaper W       Wallpaper file name in /usr/share/rpd-wallpaper, or a path.
@@ -247,11 +249,11 @@ EOF
   -V, --version           Show the version.
 
 Examples:
-  ./${self}                        interactive
-  ./${self} -t pixtrix -y          PiXtrix for the current desktop
-  sudo ./${self} -t pixnoir -d lxde,xfce --lightdm -y
-  ./${self} --apply-only -t pixflat
-  ./${self} --uninstall
+  ./${self}                        choose a theme, confirm, done
+  ./${self} -y                     no questions: the matching theme, detected desktop
+  ./${self} -t pixnoir             choose the theme yourself
+  ./${self} --check                list available updates
+  ./${self} --uninstall            undo everything
 EOF
 }
 
@@ -426,6 +428,16 @@ pick_suite() {
 	fi
 }
 
+# Print the theme matching this Debian release: the Raspberry Pi OS Trixie look
+# (PiXtrix) on Debian 13 and newer, the Bookworm look (PiXflat) otherwise.
+_default_theme() {
+	local suite=$H_SUITE
+	if [[ -z $suite ]]; then
+		case $H_CODENAME in trixie|forky|duke|sid) suite=trixie ;; *) suite=bookworm ;; esac
+	fi
+	if (( $(_suite_rank "$suite" 2>/dev/null || echo 0) >= 3 )); then echo pixtrix; else echo pixflat; fi
+}
+
 # Stop if the theme needs a newer Debian release.
 check_theme_supported() {
 	if [[ $T_ERA == trixie ]] && (( $(_suite_rank "$H_SUITE") < 3 )); then
@@ -552,18 +564,21 @@ _archive_url() {
 	case $1 in rpi) printf '%s\n' "$RPI_ARCHIVE" ;; debian) printf '%s\n' "$DEBIAN_ARCHIVE" ;; local) printf '%s\n' "$O_REPO" ;; esac
 }
 
-# Download a URL (or copy a local path) over HTTPS only.
+# Download from an official archive (or copy a local path). Only HTTPS URLs of
+# the Raspberry Pi and Debian archives are accepted, and redirects are refused,
+# so nothing can come from another host.
 # Usage: fetch URL|PATH OUTPUT [SHOW-PROGRESS]
 fetch() {
 	local url=$1 out=$2 progress=${3:-0}
 	if [[ $url == /* ]]; then cp -- "$url" "$out"; return; fi
+	[[ $url == "$RPI_ARCHIVE"/* || $url == "$DEBIAN_ARCHIVE"/* ]] || die "refusing to download from an unofficial source: $url"
 	debug "GET $url"
 	if command -v curl >/dev/null; then
-		local -a a=(-fL --proto '=https' --proto-redir '=https' --retry 3 --retry-delay 2 --connect-timeout 20 -o "$out")
+		local -a a=(-f --proto '=https' --max-redirs 0 --retry 3 --retry-delay 2 --connect-timeout 20 -o "$out")
 		if (( progress )) && [[ -t 2 ]]; then a+=(--progress-bar); else a+=(-sS); fi
 		curl "${a[@]}" "$url"
 	elif command -v wget >/dev/null; then
-		local -a a=(--https-only --tries=3 --timeout=20 -O "$out")
+		local -a a=(--https-only --max-redirect=0 --tries=3 --timeout=20 -O "$out")
 		if (( progress )) && [[ -t 2 ]]; then a+=(-q --show-progress); else a+=(-q); fi
 		wget "${a[@]}" "$url"
 	else
@@ -642,14 +657,19 @@ index_load() {
 	IDX_LOADED[$key]=1
 }
 
-# Print "version<TAB>arch<TAB>filename<TAB>sha256<TAB>size<TAB>depends" for the
-# newest version of a package in one index.
-# Usage: index_best ARCHIVE SUITE ARCH PACKAGE
-index_best() {
-	local aid=$1 suite=$2 arch=$3 pkg=$4 line best="" bv="" v
+# Print "version<TAB>arch<TAB>filename<TAB>sha256<TAB>size<TAB>depends" for every
+# version of a package in one index, newest first.
+# Usage: index_candidates ARCHIVE SUITE ARCH PACKAGE
+index_candidates() {
+	local aid=$1 suite=$2 arch=$3 pkg=$4 line v i
+	local -a lines=()
 	while IFS= read -r line; do
 		v=${line%%$'\t'*}
-		if [[ -z $bv ]] || dpkg --compare-versions "$v" gt "$bv"; then bv=$v best=$line; fi
+		for (( i = ${#lines[@]}; i > 0; i-- )); do
+			dpkg --compare-versions "$v" gt "${lines[i-1]%%$'\t'*}" || break
+			lines[i]=${lines[i-1]}
+		done
+		lines[i]=$line
 	done < <(awk -v p="$pkg" 'BEGIN { RS = ""; FS = "\n" }
 		{
 			n = v = a = f = s = z = d = ""
@@ -664,13 +684,41 @@ index_best() {
 			}
 			if (n == p && f != "" && s != "") print v "\t" a "\t" f "\t" s "\t" z "\t" d
 		}' "$WORKDIR/index/$aid/$suite/Packages-$arch")
-	[[ -n $best ]] && printf '%s\n' "$best"
+	(( ${#lines[@]} )) && printf '%s\n' "${lines[@]}"
 }
 
-# Succeed if every dependency in a Depends field can be satisfied on the target,
-# counting renamed dependencies (DEP_RENAMES) as satisfied by their successor.
+# Compare two Debian versions with a Depends operator (<<, <=, =, >=, >>).
+_vcmp() {
+	local op
+	case $2 in '<<') op=lt ;; '<='|'<') op=le ;; '=') op=eq ;; '>='|'>') op=ge ;; '>>') op=gt ;; *) return 1 ;; esac
+	dpkg --compare-versions "$1" "$op" "$3"
+}
+
+# Set AV to the versions of a package available on the target: the install
+# set, the installed version and APT candidate, or, when building ./packages,
+# the Debian index. "*" stands for a virtual package of unknown version.
+declare -A AVAIL=()
+_avail() {
+	local n=$1
+	if [[ -z ${AVAIL[$n]+set} ]]; then
+		if [[ -n ${IN_SET[$n]:-} ]]; then
+			AVAIL[$n]=${PKG_VER[$n]:-*}
+		elif [[ -n $DEP_INDEX ]]; then
+			AVAIL[$n]=$(awk -v n="$n" '$1 == n { print ($2 == "" ? "*" : $2) }' "$DEP_INDEX" | paste -sd' ' -)
+		else
+			AVAIL[$n]=$(printf '%s %s' "$(_installed_version "$n")" \
+				"$(LC_ALL=C apt-cache policy "$n" 2>/dev/null | awk '/Candidate:/ && $2 != "(none)" { print $2 }')" | xargs)
+			if [[ -z ${AVAIL[$n]} ]] && apt_has "$n"; then AVAIL[$n]="*"; fi
+		fi
+	fi
+	AV=${AVAIL[$n]}
+}
+
+# Succeed if every dependency in a Depends field, including its version
+# constraint, can be satisfied on the target. A dependency Debian renamed
+# (DEP_RENAMES) counts as satisfied by its successor.
 _deps_satisfiable() {
-	local group alt r ok
+	local group alt name op ver r v ok
 	local -a groups alts
 	IFS=, read -ra groups <<<"$1"
 	for group in "${groups[@]}"; do
@@ -678,10 +726,14 @@ _deps_satisfiable() {
 		ok=0
 		IFS='|' read -ra alts <<<"$group"
 		for alt in "${alts[@]}"; do
-			alt=${alt%%(*}; alt=${alt%%:*}; alt=${alt//[[:space:]]/}
-			if _dep_ok "$alt"; then ok=1; break; fi
-			for r in ${DEP_RENAMES[$alt]:-}; do
-				if _dep_ok "$r"; then ok=1; break 2; fi
+			name=${alt%%(*} op="" ver=""
+			name=${name%%:*}; name=${name//[[:space:]]/}
+			if [[ $alt =~ \(([\<\>=]+)[[:space:]]*([^\)[:space:]]+)\) ]]; then op=${BASH_REMATCH[1]} ver=${BASH_REMATCH[2]}; fi
+			for r in "$name" ${DEP_RENAMES[$name]:-}; do
+				_avail "$r"
+				for v in $AV; do
+					if [[ -z $op || $v == "*" ]] || _vcmp "$v" "$op" "$ver"; then ok=1; break 3; fi
+				done
 			done
 		done
 		(( ok )) || return 1
@@ -689,15 +741,18 @@ _deps_satisfiable() {
 }
 
 # Find the newest compatible version of a package and record it in PKG_*.
-#  * From the target release: any package (its binaries match this system).
+# A version is compatible when all its dependencies, including versions, are
+# available on this Debian release, so a package that needs a Raspberry Pi
+# rebuild of a Debian package is skipped for an older version that does not.
+#  * From the target release: any architecture (binaries match this system).
 #  * From newer Raspberry Pi OS releases: architecture-independent packages
-#    (icons, fonts, wallpapers) whose dependencies are all satisfiable here.
+#    (icons, fonts, wallpapers) only.
 #  * Only if neither has it: older releases, then the armhf index, which lists
 #    every Pi package.
-# Offline, the local repository is the only source.
+# Offline, the local repository is the only source and is used as built.
 # Usage: resolve_pkg PACKAGE [ARCHIVE]
 resolve_pkg() {
-	local pkg=$1 aid=${2:-rpi} s x line best="" v a f sha z d
+	local pkg=$1 aid=${2:-rpi} s x line best="" skipped="" v a f sha z d
 	[[ -n $O_REPO && $O_ACTION != update-packages ]] && aid=local
 	local -a newer=() older=()
 	if [[ $aid == rpi ]]; then
@@ -711,26 +766,28 @@ resolve_pkg() {
 			done
 		fi
 	fi
-	for x in "$H_SUITE/$H_ARCH" "${newer[@]}"; do
+	for x in "$H_SUITE/$H_ARCH" "${newer[@]}" "${older[@]}"; do
+		[[ -n $best && " ${older[*]} " == *" $x "* ]] && break   # older releases are only a fallback
 		index_load "$aid" "${x%/*}" "${x#*/}" || continue
-		line=$(index_best "$aid" "${x%/*}" "${x#*/}" "$pkg") || continue
-		IFS=$'\t' read -r v a f sha z d <<<"$line"
-		if [[ $x != "$H_SUITE/$H_ARCH" ]]; then
-			if [[ $a != all ]] || ! _deps_satisfiable "$d"; then continue; fi
-		fi
-		if [[ -z $best ]] || dpkg --compare-versions "$v" gt "${best%%$'\t'*}"; then best="$line"$'\t'"${x%/*}"; fi
+		while IFS= read -r line; do
+			IFS=$'\t' read -r v a f sha z d <<<"$line"
+			[[ $x == "$H_SUITE/$H_ARCH" || $a == all ]] || break
+			if [[ $aid != local ]] && ! _deps_satisfiable "$d"; then
+				[[ -n $skipped ]] || skipped=$v
+				continue
+			fi
+			if [[ -z $best ]] || dpkg --compare-versions "$v" gt "${best%%$'\t'*}"; then best="$line"$'\t'"${x%/*}"; fi
+			break
+		done < <(index_candidates "$aid" "${x%/*}" "${x#*/}" "$pkg")
 	done
 	if [[ -z $best ]]; then
-		for x in "${older[@]}"; do
-			index_load "$aid" "${x%/*}" "${x#*/}" || continue
-			line=$(index_best "$aid" "${x%/*}" "${x#*/}" "$pkg") || continue
-			[[ $(cut -f2 <<<"$line") == all ]] || continue
-			best="$line"$'\t'"${x%/*}"
-			break
-		done
+		[[ -n $skipped ]] && warn "$pkg $skipped needs packages that Debian does not provide; no compatible version found"
+		return 1
 	fi
-	[[ -n $best ]] || return 1
 	IFS=$'\t' read -r v a f sha z d s <<<"$best"
+	if [[ -n $skipped ]] && dpkg --compare-versions "$skipped" gt "$v"; then
+		warn "$pkg $skipped needs packages that Debian does not provide; using $v"
+	fi
 	PKG_VER[$pkg]=$v PKG_FILE[$pkg]=$f PKG_SHA[$pkg]=$sha PKG_SIZE[$pkg]=${z:-0}
 	PKG_SUITE[$pkg]=$s PKG_AID[$pkg]=$aid
 }
@@ -846,7 +903,7 @@ _is_rpi_engine() { [[ $1 == gtk2-engines-pixflat || $1 == gtk2-engines-clearlook
 # by the APT sources, or, when building ./packages, by the Debian index.
 _dep_ok() {
 	[[ -n ${IN_SET[$1]:-} ]] && return 0
-	if [[ -n $DEP_INDEX ]]; then grep -qxF -- "$1" "$DEP_INDEX"; else apt_has "$1"; fi
+	if [[ -n $DEP_INDEX ]]; then awk -v n="$1" '$1 == n { f = 1; exit } END { exit !f }' "$DEP_INDEX"; else apt_has "$1"; fi
 }
 
 # Rewrite dependency names that Debian has since renamed (see DEP_RENAMES).
@@ -874,10 +931,14 @@ compat_fix() {
 	out="$WORKDIR/debs/$(basename "$deb" .deb)+debcompat.deb"
 	rm -rf -- "$dir"; mkdir -p "$(dirname "$dir")"
 	dpkg-deb -R "$deb" "$dir"
+	# Keep the original timestamps, so the same input gives an identical file.
+	local stamp
+	stamp=$(stat -c %Y "$dir/DEBIAN/control")
 	DEPS=$deps awk '/^Depends:/ { print "Depends: " ENVIRON["DEPS"]; next } { print }' \
 		"$dir/DEBIAN/control" >"$dir/DEBIAN/control.new"
 	mv -- "$dir/DEBIAN/control.new" "$dir/DEBIAN/control"
-	dpkg-deb --root-owner-group -b "$dir" "$out" >/dev/null
+	touch -d "@$stamp" "$dir/DEBIAN/control" "$dir/DEBIAN"
+	SOURCE_DATE_EPOCH=$stamp dpkg-deb --root-owner-group -b "$dir" "$out" >/dev/null
 	chmod 0644 "$out"
 	printf '%s\n' "$out"
 }
@@ -1377,6 +1438,23 @@ _verify_installed() {
 	(( bad )) || ok "Installed versions verified"
 }
 
+# Stop unless every package in APT's plan comes from an official source: the
+# verified files ("local-deb") or the Debian archive (on a derivative, its own
+# archive). This keeps third-party and Raspberry Pi rebuilds of Debian packages
+# out, even if such a source is configured.
+# Usage: _check_origins APT-SIMULATION-OUTPUT
+_check_origins() {
+	local line pkg origins own=Debian
+	[[ $H_ID == debian ]] || own=${H_ID^}
+	while IFS= read -r line; do
+		pkg=$(awk '{ print $2 }' <<<"$line")
+		origins=$(sed -E 's/^Inst [^ ]+ (\[[^]]*\] )?\([^ ]+ ([^[]*)\[.*/\2/' <<<"$line")
+		if [[ $origins != *local-deb* && $origins != *Debian* && $origins != *"$own"* ]]; then
+			die "refusing to install $pkg from '${origins% }': Debian packages must come from Debian"
+		fi
+	done < <(grep '^Inst ' <<<"$1")
+}
+
 # Download, verify and install the packages, then build and install
 # pixflat-theme-debian. APT never removes packages (--no-remove) and, offline,
 # never downloads (--no-download).
@@ -1408,10 +1486,13 @@ install_all() {
 
 	step "Installing packages"
 	if (( ${#files[@]} + ${#APT_PKGS[@]} )); then
-		if (( ! O_DRY_RUN )) && ! sim=$(LC_ALL=C apt-get install --simulate "${opts[@]}" "${files[@]}" "${APT_PKGS[@]}" 2>&1); then
-			tail -n 15 <<<"$sim" >&2
-			[[ -n $O_REPO ]] && warn "offline mode can only use packages that are installed or in ./packages"
-			die "APT cannot install the packages on this system (see above)"
+		if (( ! O_DRY_RUN )); then
+			if ! sim=$(LC_ALL=C apt-get install --simulate "${opts[@]}" "${files[@]}" "${APT_PKGS[@]}" 2>&1); then
+				tail -n 15 <<<"$sim" >&2
+				[[ -n $O_REPO ]] && warn "offline mode can only use packages that are installed or in ./packages"
+				die "APT cannot install the packages on this system (see above)"
+			fi
+			_check_origins "$sim"
 		fi
 		as_root env DEBIAN_FRONTEND=noninteractive apt-get install "${opts[@]}" "${files[@]}" "${APT_PKGS[@]}"
 	fi
@@ -1490,12 +1571,25 @@ _write_checksums() {
 	(cd -- "$1" && find . -type f ! -name SHA256SUMS -printf '%P\n' | LC_ALL=C sort | xargs -d '\n' sha256sum >SHA256SUMS)
 }
 
-# Write the names and Provides of a Packages index, one per line.
+# Write "name version" for every package of a Packages index, and "name" or
+# "name version" for every virtual package it provides.
 _index_names() {
-	awk '/^Package: / { print $2 }
-		/^Provides: / {
-			sub(/^Provides: /, ""); n = split($0, a, ",")
-			for (i = 1; i <= n; i++) { x = a[i]; sub(/^[ \t]+/, "", x); sub(/[ \t(].*/, "", x); print x }
+	awk 'BEGIN { RS = ""; FS = "\n" }
+		{
+			n = v = pr = ""
+			for (i = 1; i <= NF; i++) {
+				if ($i ~ /^Package: /) n = substr($i, 10)
+				else if ($i ~ /^Version: /) v = substr($i, 10)
+				else if ($i ~ /^Provides: /) pr = substr($i, 11)
+			}
+			print n " " v
+			m = split(pr, a, ",")
+			for (j = 1; j <= m; j++) {
+				x = a[j]; pv = ""
+				if (match(x, /\(= *[^)]+\)/)) { pv = substr(x, RSTART + 1, RLENGTH - 2); sub(/^= */, "", pv) }
+				sub(/^[ \t]+/, "", x); sub(/[ \t(].*/, "", x)
+				print x (pv == "" ? "" : " " pv)
+			}
 		}' "$1" | sort -u
 }
 
@@ -1532,7 +1626,7 @@ build_offline_repo() {
 		for arch in "${OFFLINE_ARCHES[@]}"; do
 			step "$suite / $arch"
 			H_SUITE=$suite H_ARCH=$arch
-			PKG_VER=() PKG_FILE=() PKG_SHA=() PKG_SIZE=() PKG_SUITE=() PKG_AID=() IN_SET=()
+			PKG_VER=() PKG_FILE=() PKG_SHA=() PKG_SIZE=() PKG_SUITE=() PKG_AID=() IN_SET=() AVAIL=()
 			index_load debian "$suite" "$arch" || die "cannot load the Debian $suite/$arch index"
 			deb=$WORKDIR/index/debian/$suite/Packages-$arch
 			DEP_INDEX=$deb.names
@@ -2394,6 +2488,7 @@ banner() {
 choose_theme() {
 	local new_ok=1 ans def=1
 	[[ -n $H_SUITE ]] && (( $(_suite_rank "$H_SUITE") < 3 )) && new_ok=0
+	[[ $(_default_theme) == pixtrix ]] && def=3
 	log ""
 	log "  ${C_B}Select a theme${C_0}"
 	log "   1) PiXflat   light · Raspberry Pi OS Bookworm"
@@ -2486,7 +2581,7 @@ main() {
 		pick_suite
 	fi
 	if [[ -z $O_THEME ]]; then
-		if (( O_INTERACTIVE )); then choose_theme; else O_THEME=pixflat; fi
+		if (( O_INTERACTIVE )); then choose_theme; else O_THEME=$(_default_theme); fi
 	fi
 	if (( O_INTERACTIVE && O_DO_INSTALL && O_WITH_WALLPAPER && ! O_4K )) && [[ -z $O_WALLPAPER ]] \
 		&& ask "Use the 4K wallpapers (about 100 MB instead of 26-45 MB)" n; then

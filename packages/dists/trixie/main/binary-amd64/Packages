@@ -129,8 +129,8 @@ Section: gnome
 Priority: optional
 Multi-Arch: same
 Filename: pool/engines/gtk2-engines-clearlookspix_2.20.8_amd64+debcompat.deb
-Size: 80048
-SHA256: 2c64075544254dd55317a1c25ee5b2a4c25bfdec406c51e20da06e90538e2b8e
+Size: 80088
+SHA256: 2094519e33bd84999d692c5373f478cdacf36aa9c02edd6801a0747bd20e4ce2
 Description: clearlookspix theme for GTK+ 2.x
 
 Package: pixtrix-theme

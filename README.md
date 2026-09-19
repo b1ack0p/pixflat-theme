@@ -21,7 +21,8 @@ Debian: no repository is added and no Debian package is replaced (see
 ```sh
 git clone https://github.com/b1ack0p/pixflat-theme.git
 cd pixflat-theme
-./install.sh                 # interactive: choose a theme, confirm, done
+./install.sh                 # choose a theme, confirm, done
+./install.sh -y              # or no questions at all
 ```
 
 Offline, for example on a machine without internet access:
@@ -30,19 +31,26 @@ Offline, for example on a machine without internet access:
 ./install-offline.sh
 ```
 
-Both scripts take the same options and detect everything themselves: the Debian
-release, the architecture, the user and the desktop. Run them as your normal user;
-they ask for `sudo` only to install packages, then apply the settings to your own
-desktop. Under `sudo`, the settings go to the user who invoked `sudo` (or use
-`--user NAME`).
+No options are needed. Both scripts detect everything themselves:
+
+| Detected | How |
+|----------|-----|
+| Debian release | `/etc/os-release`: Debian 12 uses the Raspberry Pi OS bookworm packages, Debian 13 and testing use trixie; derivatives are matched by library generation |
+| Architecture | amd64, arm64, armhf or i386, from `dpkg` |
+| User | you, or the user who invoked `sudo` |
+| Desktop | the session you are logged into; if none is running, every desktop installed |
+| Theme | the look of the matching Raspberry Pi OS release: PiXtrix on Debian 13, PiXflat on Debian 12 (asked interactively, chosen automatically with `-y`) |
+
+Run them as your normal user. They ask for `sudo` only to install packages, then
+apply the settings to your own desktop.
 
 ## Themes
 
 | Theme (`-t`) | Look | Font | Wallpaper | Needs |
 |--------------|------|------|-----------|-------|
-| `pixflat` (default) | light, Raspberry Pi OS Bookworm | Piboto (PibotoLt 12) | fisherman | Debian 12+ |
+| `pixflat` | light, Raspberry Pi OS Bookworm (default on Debian 12) | Piboto (PibotoLt 12) | fisherman | Debian 12+ |
 | `pixnoir` | dark, Raspberry Pi OS Bookworm | Piboto | fisherman | Debian 12+ |
-| `pixtrix` | light, Raspberry Pi OS Trixie | Nunito Sans Light 12 | sunrise | Debian 13+ |
+| `pixtrix` | light, Raspberry Pi OS Trixie (default on Debian 13) | Nunito Sans Light 12 | sunrise | Debian 13+ |
 | `pixonyx` | dark, Raspberry Pi OS Trixie | Nunito Sans Light 12 | sunrise | Debian 13+ |
 | `pix` | legacy, Raspberry Pi OS Buster/Bullseye | Piboto | fisherman | Debian 12+ |
 
@@ -87,9 +95,11 @@ GTK 4 applications running on LXDE get the colour layer above.
 
 ## Options
 
+All options are optional; they override what is detected.
+
 ```
 -t, --theme NAME     pixflat | pixnoir | pixtrix | pixonyx | pix
--d, --desktop LIST   auto (default), all, none, or e.g. lxde,xfce
+-d, --desktop LIST   other desktops than the detected one: all, none, or e.g. lxde,xfce
 -u, --user NAME      configure another user's desktop (needs sudo)
     --wallpaper W    a file in /usr/share/rpd-wallpaper (e.g. aurora) or a path
     --no-wallpaper   skip the wallpaper packages (about 27 or 45 MB)
@@ -108,10 +118,13 @@ GTK 4 applications running on LXDE get the colour layer above.
 Examples:
 
 ```sh
-./install.sh -t pixtrix -y                       # PiXtrix on the current desktop
-sudo ./install.sh -t pixnoir -d lxde,xfce --lightdm -y
-./install.sh -n -t pixflat --4k                  # preview every step
-./install.sh --uninstall
+./install.sh                     # choose a theme, confirm, done
+./install.sh -y                  # no questions: matching theme, detected desktop
+./install.sh -n                  # preview every step, change nothing
+./install.sh -t pixnoir --4k     # a specific theme with 4K wallpapers
+./install.sh -d all --lightdm    # every installed desktop and the login screen
+./install.sh --check             # list available updates
+./install.sh --uninstall         # undo everything
 ```
 
 ## How it works
@@ -121,8 +134,8 @@ sudo ./install.sh -t pixnoir -d lxde,xfce --lightdm -y
    by ABI generation, and `--suite` overrides it. Packages with binaries (themes,
    GTK 2 engines) always come from the matching release, so they are built against
    your system's libraries. Architecture-independent packages (icons, fonts,
-   wallpapers) may come from a newer release, but only if all their dependencies
-   are available on your Debian release.
+   wallpapers) may come from a newer release. Either way, a version is only used
+   if all its dependencies, including their versions, are available from Debian.
 2. **Verifies everything:** the archive's `InRelease` index must be signed by the
    Raspberry Pi Archive Signing Key (fingerprint
    `CF8A 1AF5 02A2 AA2D 763B AE7E 82B1 2992 7FA3 303E`, pinned in the script). Every
@@ -188,9 +201,18 @@ The installer follows [DontBreakDebian](https://wiki.debian.org/DontBreakDebian)
   system directories. The generated `pixflat-theme-debian` package only adds files
   under `/usr/share` and is removed cleanly with APT. Libraries and engines pulled
   in as dependencies are marked automatic, so `apt autoremove` cleans them up.
+* **Only official sources:** downloads are limited to `https://archive.raspberrypi.org/`
+  and `https://deb.debian.org/`; any other address, plain HTTP and redirects are
+  refused. Before installing, the installer checks where APT would take each
+  package from. On Debian, anything that is not from Debian or from the verified
+  Raspberry Pi files is refused, even if another source is configured.
 * **Only verified content:** Raspberry Pi indexes are checked against the pinned
   archive key, Debian indexes against `debian-archive-keyring`, and every package
   against its SHA256.
+* **Only Debian's own packages:** some Raspberry Pi OS updates depend on Pi rebuilds of
+  Debian packages (version suffix `+rpt`). Such a version is skipped for the newest
+  version that works with Debian's packages, and the installer says so. Pi rebuilds
+  of Debian packages are never installed.
 
 ## Offline installation
 
@@ -253,55 +275,48 @@ Debian 12 or 13, or a derivative, on amd64, arm64, armhf or i386; bash 4.4+;
   image must be readable outside your home directory, e.g. under
   `/usr/share/backgrounds/`.
 
-## References and credits
+## Package sources
 
-The themes, icons, fonts, wallpapers and desktop defaults are the work of
-[Raspberry Pi Ltd](https://www.raspberrypi.com/) and the Raspberry Pi desktop
-team. Most of the desktop's UI work is by [@spl237](https://github.com/spl237).
-This project only installs their official packages on Debian and adapts the
-settings; all artwork belongs to its authors and is distributed under its own
-licence (see `/usr/share/doc/<package>/copyright` after installation).
+The installers download only from these two official archives. Every link
+below points to the packages themselves.
 
-**Raspberry Pi OS**
+**Raspberry Pi OS**: <https://archive.raspberrypi.org/debian/>
+(signed indexes in [`dists/`](https://archive.raspberrypi.org/debian/dists/),
+package files in [`pool/main/`](https://archive.raspberrypi.org/debian/pool/main/))
 
-* Package archive: <https://archive.raspberrypi.org/debian/>, with the package
-  pool at <https://archive.raspberrypi.org/debian/pool/main/>
-* Desktop source code: <https://github.com/raspberrypi-ui>
-* Themes: [pixflat-theme](https://archive.raspberrypi.org/debian/pool/main/p/pixflat-theme/)
-  (PiXflat, PiXnoir), [pixtrix-theme](https://archive.raspberrypi.org/debian/pool/main/p/pixtrix-theme/)
-  (PiXtrix, PiXonyx), [pix-theme](https://archive.raspberrypi.org/debian/pool/main/p/pix-theme/) (PiX)
-* Icons and cursors: [pixflat-icons](https://archive.raspberrypi.org/debian/pool/main/p/pixflat-icons/),
-  [pixtrix-icons](https://archive.raspberrypi.org/debian/pool/main/p/pixtrix-icons/),
-  [rpd-icons](https://archive.raspberrypi.org/debian/pool/main/r/rpd-icons/)
-* GTK 2 engines: [gtk2-engines-pixflat](https://github.com/raspberrypi-ui/gtk2-engines-pixflat)
-  ([packages](https://archive.raspberrypi.org/debian/pool/main/g/gtk2-engines-pixflat/)),
-  [gtk2-engines-clearlookspix](https://archive.raspberrypi.org/debian/pool/main/g/gtk2-engines-clearlookspix/)
-* Fonts: [fonts-piboto](https://archive.raspberrypi.org/debian/pool/main/f/fonts-piboto/),
-  [fonts-nunito-sans](https://archive.raspberrypi.org/debian/pool/main/f/fonts-nunito-sans/)
-* Wallpapers: [rpd-wallpaper](https://archive.raspberrypi.org/debian/pool/main/r/rpd-wallpaper/),
-  [rpd-wallpaper-4k](https://archive.raspberrypi.org/debian/pool/main/r/rpd-wallpaper-4k/),
-  [rpd-wallpaper-trixie](https://archive.raspberrypi.org/debian/pool/main/r/rpd-wallpaper-trixie/),
-  [rpd-wallpaper-trixie-4k](https://archive.raspberrypi.org/debian/pool/main/r/rpd-wallpaper-trixie-4k/)
-* Desktop defaults (fonts, colours, panel, window layout):
-  [raspberrypi-ui-mods](https://github.com/raspberrypi-ui/raspberrypi-ui-mods) (Bookworm) and
-  [rpd-metas](https://github.com/raspberrypi-ui/rpd-metas) (`rpd-common`, `rpd-x-core`,
-  `rpd-wayland-core`; Trixie)
-* Related desktop components, not installed:
-  [lxpanel-pi](https://github.com/raspberrypi-ui/lxpanel-pi),
-  [wf-panel-pi](https://github.com/raspberrypi-ui/wf-panel-pi),
-  [pcmanfm-pi](https://github.com/raspberrypi-ui/pcmanfm-pi),
-  [labwc](https://github.com/raspberrypi-ui/labwc),
-  [openbox](https://github.com/raspberrypi-ui/openbox),
-  [pi-greeter](https://github.com/raspberrypi-ui/pi-greeter)
+| Component | Packages |
+|-----------|----------|
+| Themes | [pixflat-theme](https://archive.raspberrypi.org/debian/pool/main/p/pixflat-theme/) (PiXflat, PiXnoir), [pixtrix-theme](https://archive.raspberrypi.org/debian/pool/main/p/pixtrix-theme/) (PiXtrix, PiXonyx), [pix-theme](https://archive.raspberrypi.org/debian/pool/main/p/pix-theme/) (PiX) |
+| Icons and cursors | [pixflat-icons](https://archive.raspberrypi.org/debian/pool/main/p/pixflat-icons/), [pixtrix-icons](https://archive.raspberrypi.org/debian/pool/main/p/pixtrix-icons/), [rpd-icons](https://archive.raspberrypi.org/debian/pool/main/r/rpd-icons/) |
+| GTK 2 engines | [gtk2-engines-pixflat](https://archive.raspberrypi.org/debian/pool/main/g/gtk2-engines-pixflat/), [gtk2-engines-clearlookspix](https://archive.raspberrypi.org/debian/pool/main/g/gtk2-engines-clearlookspix/) |
+| Fonts | [fonts-piboto](https://archive.raspberrypi.org/debian/pool/main/f/fonts-piboto/), [fonts-nunito-sans](https://archive.raspberrypi.org/debian/pool/main/f/fonts-nunito-sans/) |
+| Wallpapers | [rpd-wallpaper](https://archive.raspberrypi.org/debian/pool/main/r/rpd-wallpaper/), [rpd-wallpaper-4k](https://archive.raspberrypi.org/debian/pool/main/r/rpd-wallpaper-4k/), [rpd-wallpaper-trixie](https://archive.raspberrypi.org/debian/pool/main/r/rpd-wallpaper-trixie/), [rpd-wallpaper-trixie-4k](https://archive.raspberrypi.org/debian/pool/main/r/rpd-wallpaper-trixie-4k/) |
 
-**Debian**
+The desktop settings (fonts, colours, panel and window layout) are the values from
+the Raspberry Pi OS configuration packages
+[raspberrypi-ui-mods](https://archive.raspberrypi.org/debian/pool/main/r/raspberrypi-ui-mods/)
+(Bookworm) and [rpd-metas](https://archive.raspberrypi.org/debian/pool/main/r/rpd-metas/)
+(`rpd-common`, `rpd-x-core`, `rpd-wayland-core`; Trixie). These packages are not
+installed; the installer applies their values to your desktop.
 
-* Archive: <https://deb.debian.org/debian/>, packages at <https://packages.debian.org/>
-* [gtk2-engines-pixbuf and libgtk2.0-bin](https://packages.debian.org/source/stable/gtk+2.0),
-  [gnome-icon-theme](https://packages.debian.org/stable/gnome-icon-theme),
-  [adwaita-icon-theme-legacy](https://packages.debian.org/stable/adwaita-icon-theme-legacy),
-  [fonts-liberation](https://packages.debian.org/stable/fonts-liberation),
-  [sound-theme-freedesktop](https://packages.debian.org/stable/sound-theme-freedesktop)
-* Debian logo on the menu button: [desktop-base](https://packages.debian.org/stable/desktop-base)
-  (falls back to the logo in `debconf`)
-* [DontBreakDebian](https://wiki.debian.org/DontBreakDebian), the guidelines this installer follows
+**Debian**: your APT sources, or <https://deb.debian.org/debian/> when building `packages/`
+
+| Component | Packages |
+|-----------|----------|
+| GTK 2 engine and runtime | [gtk2-engines-pixbuf, libgtk2.0-bin, libgtk2.0-0](https://packages.debian.org/source/stable/gtk+2.0) |
+| Icon fallback themes | [gnome-icon-theme](https://packages.debian.org/stable/gnome-icon-theme), [adwaita-icon-theme-legacy](https://packages.debian.org/stable/adwaita-icon-theme-legacy) |
+| Fonts | [fonts-liberation](https://packages.debian.org/stable/fonts-liberation) |
+| Sounds | [sound-theme-freedesktop](https://packages.debian.org/stable/sound-theme-freedesktop) |
+| Debian logo on the menu button | [desktop-base](https://packages.debian.org/stable/desktop-base), already installed on Debian desktops (falls back to the logo in `debconf`) |
+
+## Credits
+
+The themes, icons, fonts, wallpapers and desktop settings are the work of
+[Raspberry Pi Ltd](https://www.raspberrypi.com/) and the Raspberry Pi desktop team
+(most of the desktop's UI work is by spl237). This project only installs their
+official packages on Debian and adapts the settings. All artwork belongs to its
+authors and is distributed under its own licence (see
+`/usr/share/doc/<package>/copyright` after installation).
+
+This installer follows Debian's [DontBreakDebian](https://wiki.debian.org/DontBreakDebian)
+guidelines.
