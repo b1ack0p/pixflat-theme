@@ -21,7 +21,7 @@ Debian: no repository is added and no Debian package is replaced (see
 ```sh
 git clone https://github.com/b1ack0p/pixflat-theme.git
 cd pixflat-theme
-./install.sh                 # choose a theme, confirm, done
+./install.sh                 # install all themes, then choose the look
 ./install.sh -y              # or no questions at all
 ```
 
@@ -39,7 +39,7 @@ No options are needed. Both scripts detect everything themselves:
 | Architecture | amd64, arm64, armhf or i386, from `dpkg` |
 | User | you, or the user who invoked `sudo` |
 | Desktop | the session you are logged into; if none is running, every desktop installed |
-| Theme | the look of the matching Raspberry Pi OS release: PiXtrix on Debian 13, PiXflat on Debian 12 (asked interactively, chosen automatically with `-y`) |
+| Themes | every theme compatible with the release is installed; the look is chosen at the end (the default is the matching Raspberry Pi OS release: PiXtrix on Debian 13, PiXflat on Debian 12) |
 
 Run them as your normal user. They ask for `sudo` only to install packages, then
 apply the settings to your own desktop.
@@ -54,7 +54,24 @@ apply the settings to your own desktop.
 | `pixonyx` | dark, Raspberry Pi OS Trixie | Nunito Sans Light 12 | sunrise | Debian 13+ |
 | `pix` | legacy, Raspberry Pi OS Buster/Bullseye | Piboto | fisherman | Debian 12+ |
 
-The wallpapers are also available as 4K (3840×2160) sets with `--4k`.
+All themes compatible with your Debian release are installed (about 76 MB on
+Debian 13, most of it wallpapers). At the end, the installer asks which look to
+apply: a theme, then an icon and cursor set (the theme's own by default, or any
+other installed set). `0` keeps your current desktop. With `-y` the theme matching
+your release is applied without asking.
+
+Change the look at any time without downloading anything:
+
+```sh
+./install.sh --apply-only        # the same menus again: theme, icons, fonts, wallpaper, panel
+```
+
+Your desktop's appearance settings (e.g. LXAppearance, Xfce Appearance) also list
+the installed themes, but change only the GTK theme and icons. `--apply-only`
+switches the whole look.
+
+Use `--only NAME` to install a single theme family instead, and `--4k` for the 4K
+(3840×2160) wallpaper sets.
 
 ## What each desktop gets
 
@@ -98,7 +115,9 @@ GTK 4 applications running on LXDE get the colour layer above.
 All options are optional; they override what is detected.
 
 ```
--t, --theme NAME     pixflat | pixnoir | pixtrix | pixonyx | pix
+-t, --theme NAME     theme to apply, without asking: pixflat | pixnoir | pixtrix | pixonyx | pix
+    --icons NAME     icon set to apply: pixflat | pixtrix | pix (default: the theme's own)
+    --only NAME      install only this theme's family instead of all themes
 -d, --desktop LIST   other desktops than the detected one: all, none, or e.g. lxde,xfce
 -u, --user NAME      configure another user's desktop (needs sudo)
     --wallpaper W    a file in /usr/share/rpd-wallpaper (e.g. aurora) or a path
@@ -109,7 +128,7 @@ All options are optional; they override what is detected.
     --no-gtk4        no GTK 4/libadwaita colour layer
     --lightdm        also theme the LightDM GTK greeter (login screen)
     --qt             make Qt applications follow the GTK theme
-    --install-only   install packages only; --apply-only: apply settings only
+    --install-only   install packages only; --apply-only: choose and apply a look only
     --check          show available updates; change nothing
     --uninstall      restore previous settings and remove what was installed
 -y, --yes            non-interactive    -n, --dry-run    show, change nothing
@@ -118,10 +137,12 @@ All options are optional; they override what is detected.
 Examples:
 
 ```sh
-./install.sh                     # choose a theme, confirm, done
-./install.sh -y                  # no questions: matching theme, detected desktop
+./install.sh                     # install all themes, then choose the look
+./install.sh -y                  # no questions: the theme matching your Debian
 ./install.sh -n                  # preview every step, change nothing
-./install.sh -t pixnoir --4k     # a specific theme with 4K wallpapers
+./install.sh -t pixnoir --icons pixtrix   # a specific look, without asking
+./install.sh --apply-only        # switch the look later
+./install.sh --only pixflat --4k # one theme family, 4K wallpapers
 ./install.sh -d all --lightdm    # every installed desktop and the login screen
 ./install.sh --check             # list available updates
 ./install.sh --uninstall         # undo everything

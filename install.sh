@@ -110,7 +110,9 @@ readonly CURSOR_ALIASES=(
 # ---------------------------------------------------------------------------
 O_ACTION="install"      # install | check | uninstall | update-packages
 O_REPO=""              # offline repository; set by install-offline.sh
-O_THEME=""
+O_THEME=""              # theme to apply; empty = ask at the end
+O_ICONS=""              # icon set to apply; empty = the theme's own
+O_ONLY=""               # install only this theme family; empty = all
 O_DESKTOPS="auto"
 O_USER=""
 O_SUITE=""
@@ -205,9 +207,10 @@ ${mode}
 
 Usage: ${self} [OPTIONS]
 
-Detected automatically: Debian release, architecture, user and desktop.
+Installs every theme compatible with this Debian release, then asks which look
+to apply. Detected automatically: Debian release, architecture, user, desktop.
 
-Themes (-t); the default is the look of the matching Raspberry Pi OS release:
+Themes:
   pixflat   Light, Raspberry Pi OS Bookworm (PiXflat + Piboto)     default on Debian 12
   pixnoir   Dark,  Raspberry Pi OS Bookworm (PiXnoir + Piboto)
   pixtrix   Light, Raspberry Pi OS Trixie   (PiXtrix + Nunito Sans) default on Debian 13+
@@ -215,7 +218,10 @@ Themes (-t); the default is the look of the matching Raspberry Pi OS release:
   pix       Legacy Raspberry Pi OS Buster/Bullseye look (PiX)
 
 Options:
-  -t, --theme NAME        Theme to install and apply (see above).
+  -t, --theme NAME        Theme to apply, without asking.
+      --icons NAME        Icon set to apply: pixflat, pixtrix or pix
+                          (default: the theme's own).
+      --only NAME         Install only this theme's family, not all themes.
   -d, --desktop LIST      Desktops to configure instead of the detected one: all,
                           none, or a comma list of: ${DE_SUPPORTED[*]}
   -u, --user NAME         User whose desktop is configured (default: the user
@@ -232,7 +238,7 @@ Options:
       --suite NAME        Raspberry Pi OS release to take packages from
                           (default: matched to this system; bookworm, trixie, ...).
       --install-only      Install system packages only, do not change settings.
-      --apply-only        Only apply settings (themes must already be installed).
+      --apply-only        Only choose and apply a look (themes already installed).
       --check             Show available updates for the installed packages; change nothing.
       --uninstall         Restore the previous settings and remove what was installed.
 EOF
@@ -249,9 +255,10 @@ EOF
   -V, --version           Show the version.
 
 Examples:
-  ./${self}                        choose a theme, confirm, done
-  ./${self} -y                     no questions: the matching theme, detected desktop
-  ./${self} -t pixnoir             choose the theme yourself
+  ./${self}                        install all themes, then choose the look
+  ./${self} -y                     no questions: the theme matching this Debian
+  ./${self} -t pixnoir --icons pixtrix   a specific look, without asking
+  ./${self} --apply-only           switch the look later
   ./${self} --check                list available updates
   ./${self} --uninstall            undo everything
 EOF
@@ -265,6 +272,8 @@ parse_args() {
 		if [[ $opt == --*=* ]]; then val=${opt#*=}; opt=${opt%%=*}; set -- "$opt" "$val" "${@:2}"; fi
 		case $opt in
 			-t|--theme)     (( $# >= 2 )) || die "$opt needs a value"; O_THEME=${2,,}; shift ;;
+			--icons)        (( $# >= 2 )) || die "$opt needs a value"; O_ICONS=${2,,}; shift ;;
+			--only)         (( $# >= 2 )) || die "$opt needs a value"; O_ONLY=${2,,}; shift ;;
 			-d|--desktop)   (( $# >= 2 )) || die "$opt needs a value"; O_DESKTOPS=${2,,}; shift ;;
 			-u|--user)      (( $# >= 2 )) || die "$opt needs a value"; O_USER=$2; shift ;;
 			--suite)        (( $# >= 2 )) || die "$opt needs a value"; O_SUITE=${2,,}; shift ;;
@@ -293,9 +302,11 @@ parse_args() {
 		shift
 	done
 	(( O_DO_INSTALL || O_DO_APPLY )) || die "--install-only and --apply-only are mutually exclusive"
-	if [[ -n $O_THEME ]]; then
-		case $O_THEME in pixflat|pixnoir|pixtrix|pixonyx|pix) ;; *) die "unknown theme '$O_THEME' (see --help)" ;; esac
-	fi
+	local t
+	for t in "$O_THEME" "$O_ONLY"; do
+		case $t in ""|pixflat|pixnoir|pixtrix|pixonyx|pix) ;; *) die "unknown theme '$t' (see --help)" ;; esac
+	done
+	case $O_ICONS in ""|pixflat|pixtrix|pix) ;; *) die "unknown icon set '$O_ICONS' (use pixflat, pixtrix or pix)" ;; esac
 	if [[ -n $O_SUITE ]] && ! _suite_rank "$O_SUITE" >/dev/null; then
 		die "unsupported suite '$O_SUITE' (use one of: ${RPI_SUITES[*]})"
 	fi
@@ -305,7 +316,7 @@ parse_args() {
 # ---------------------------------------------------------------------------
 # Theme definitions
 # ---------------------------------------------------------------------------
-# Set the T_* variables for a theme.
+# Set the T_* variables for a theme. --icons may choose another icon set.
 set_theme() {
 	T_ID=$1
 	case $T_ID in
@@ -321,31 +332,37 @@ set_theme() {
 		         T_DESC="PiX — legacy Raspberry Pi OS Buster/Bullseye" ;;
 		*) die "unknown theme '$T_ID'" ;;
 	esac
-	case $T_ERA in
-		trixie)
-			T_THEME_PKGS=(pixtrix-theme pixtrix-icons gtk2-engines-pixflat)
-			T_ICON_FALLBACK=adwaita-icon-theme-legacy
-			T_FONT_PKG=fonts-nunito-sans T_FONT_FAMILY="Nunito Sans" T_FONT_WEIGHT=Light
-			T_FONT="Nunito Sans Light 12"
-			T_WALL_PKG=rpd-wallpaper-trixie T_WALL_DEFAULT=sunrise.jpg ;;
-		*)
-			if [[ $T_ERA == legacy ]]; then
-				T_THEME_PKGS=(pix-theme rpd-icons gtk2-engines-clearlookspix)
-			else
-				T_THEME_PKGS=(pixflat-theme pixflat-icons gtk2-engines-pixflat)
-			fi
-			T_ICON_FALLBACK=gnome-icon-theme
-			T_FONT_PKG=fonts-piboto T_FONT_FAMILY=PibotoLt T_FONT_WEIGHT=Normal
-			T_FONT="PibotoLt 12"
-			T_WALL_PKG=rpd-wallpaper T_WALL_DEFAULT=fisherman.jpg ;;
-	esac
+	if [[ $T_ERA == trixie ]]; then
+		T_FONT_FAMILY="Nunito Sans" T_FONT_WEIGHT=Light T_FONT="Nunito Sans Light 12" T_WALL_DEFAULT=sunrise.jpg
+	else
+		T_FONT_FAMILY=PibotoLt T_FONT_WEIGHT=Normal T_FONT="PibotoLt 12" T_WALL_DEFAULT=fisherman.jpg
+	fi
+	case $O_ICONS in pixflat) T_ICON_BASE=PiXflat ;; pixtrix) T_ICON_BASE=PiXtrix ;; pix) T_ICON_BASE=PiX ;; esac
 	# Values used by Raspberry Pi OS itself (raspberrypi-ui-mods / rpd-common)
 	T_COLOR_SCHEME='selected_bg_color:#878791919b9b\nselected_fg_color:#f0f0f0f0f0f0\nbar_bg_color:#ededececebeb\nbar_fg_color:#000000000000\n'
 	T_DESK_BG="#d6d6d3d3dede" T_DESK_FG="#e8e8e8e8e8e8" T_DESK_SHADOW="#d6d6d3d3dede"
 	T_CURSOR_SIZE=24
 	T_SOUND_THEME=freedesktop   # Raspberry Pi OS enables event sounds with the default theme
 	if (( ! O_WITH_FONT )); then T_FONT="" T_FONT_FAMILY=""; fi
-	if (( O_4K )); then T_WALL_PKG+=-4k T_WALL_DEFAULT=${T_WALL_DEFAULT%.jpg}_4k.jpg; fi
+}
+
+# Print the Raspberry Pi OS package that provides a theme or an icon set.
+_theme_pkg() {
+	case $1 in
+		pixflat|pixnoir) echo pixflat-theme ;;
+		pixtrix|pixonyx) echo pixtrix-theme ;;
+		pix)             echo pix-theme ;;
+	esac
+}
+_icons_pkg() { case $1 in pixflat) echo pixflat-icons ;; pixtrix) echo pixtrix-icons ;; pix) echo rpd-icons ;; esac; }
+
+# Print the Raspberry Pi OS packages one theme family needs (--only).
+_family_pkgs() {
+	case $1 in
+		pixflat|pixnoir) echo pixflat-theme pixflat-icons gtk2-engines-pixflat fonts-piboto rpd-wallpaper rpd-wallpaper-4k ;;
+		pixtrix|pixonyx) echo pixtrix-theme pixtrix-icons gtk2-engines-pixflat fonts-nunito-sans rpd-wallpaper-trixie rpd-wallpaper-trixie-4k ;;
+		pix)             echo pix-theme rpd-icons gtk2-engines-clearlookspix fonts-piboto rpd-wallpaper rpd-wallpaper-4k ;;
+	esac
 }
 
 # Raspberry Pi OS packages the offline repository carries for a release.
@@ -436,13 +453,6 @@ _default_theme() {
 		case $H_CODENAME in trixie|forky|duke|sid) suite=trixie ;; *) suite=bookworm ;; esac
 	fi
 	if (( $(_suite_rank "$suite" 2>/dev/null || echo 0) >= 3 )); then echo pixtrix; else echo pixflat; fi
-}
-
-# Stop if the theme needs a newer Debian release.
-check_theme_supported() {
-	if [[ $T_ERA == trixie ]] && (( $(_suite_rank "$H_SUITE") < 3 )); then
-		die "$T_GTK needs Debian 13 (trixie) or newer; choose pixflat or pixnoir on this system"
-	fi
 }
 
 # Determine the user whose desktop is configured.
@@ -1177,10 +1187,16 @@ EOF
 # Generated package: pixflat-theme-debian
 # ---------------------------------------------------------------------------
 
-# Print the wallpaper file to use, or nothing.
+# Print the wallpaper file to use, or nothing. The theme's default wallpaper
+# comes in the requested resolution if installed, else in the other one.
 _wallpaper_path() {
-	local w=${O_WALLPAPER:-}
-	if [[ -z $w ]]; then (( O_WITH_WALLPAPER )) || return 0; w=$T_WALL_DEFAULT; fi
+	local w=${O_WALLPAPER:-} std uhd
+	if [[ -z $w ]]; then
+		(( O_WITH_WALLPAPER )) || return 0
+		std=/usr/share/rpd-wallpaper/$T_WALL_DEFAULT uhd=${std%.jpg}_4k.jpg
+		if (( O_4K )); then w=$uhd; [[ -f $w || ! -f $std ]] || w=$std
+		else w=$std; [[ -f $w || ! -f $uhd ]] || w=$uhd; fi
+	fi
 	if [[ $w != */* ]]; then
 		[[ $w == *.* ]] || w+=".jpg"
 		w=/usr/share/rpd-wallpaper/$w
@@ -1204,7 +1220,7 @@ build_local_pkg() {
 		gen_icon_overlay "$b" "$stage/usr/share/icons/$b-Debian"
 		icons+=("$b-Debian")
 	done
-	if (( O_LIGHTDM )); then
+	if (( O_LIGHTDM )) && [[ -n ${T_GTK:-} ]]; then
 		local wall; wall=$(_wallpaper_path)
 		mkdir -p "$stage/usr/share/lightdm/lightdm-gtk-greeter.conf.d"
 		{
@@ -1280,13 +1296,28 @@ verify_repo() {
 	ok "All files in $(basename -- "$O_REPO")/ match SHA256SUMS"
 }
 
-# Decide what to install: FETCH_PKGS from verified .deb files and APT_PKGS by
-# name from the APT sources. Installed packages are never upgraded.
+# Decide what to install: every theme compatible with this release (or, with
+# --only, one theme family), as FETCH_PKGS from verified .deb files, and the
+# Debian helpers they need as APT_PKGS by name. Installed packages are never
+# upgraded.
 resolve_all() {
-	local p
-	local -a wanted=("${T_THEME_PKGS[@]}") helpers
-	(( O_WITH_FONT )) && wanted+=("$T_FONT_PKG")
-	(( O_WITH_WALLPAPER )) && [[ $O_WALLPAPER != */* ]] && wanted+=("$T_WALL_PKG")
+	local p fam="" walls=0
+	local -a wanted=() helpers=()
+	[[ -n $O_ONLY ]] && fam=" $(_family_pkgs "$O_ONLY") "
+	(( O_WITH_WALLPAPER )) && [[ $O_WALLPAPER != */* ]] && walls=1
+	while read -r p; do
+		[[ -z $fam || $fam == *" $p "* ]] || continue
+		case $p in
+			fonts-*)           (( O_WITH_FONT )) || continue ;;
+			rpd-wallpaper*-4k) (( walls && O_4K )) || continue ;;
+			rpd-wallpaper*)    (( walls && ! O_4K )) || continue ;;
+		esac
+		wanted+=("$p")
+	done < <(_bundle_rpi_pkgs "$H_SUITE")
+	if [[ -n $O_ONLY && " ${wanted[*]} " != *" $(_theme_pkg "$O_ONLY") "* ]]; then
+		die "$O_ONLY is not available for Debian $H_SUITE (PiXtrix and PiXonyx need Debian 13)"
+	fi
+
 	if [[ -n $O_REPO ]]; then
 		step "Resolving packages from the offline repository ($H_SUITE, $H_ARCH)"
 	else
@@ -1298,14 +1329,9 @@ resolve_all() {
 	FETCH_PKGS=()
 	for p in "${wanted[@]}"; do IN_SET[$p]=1; done
 	for p in "${wanted[@]}"; do
-		if resolve_pkg "$p"; then
-			FETCH_PKGS+=("$p")
-		elif [[ $p == "$T_FONT_PKG" || $p == "$T_WALL_PKG" ]]; then
-			warn "$p is not available for $H_SUITE; skipping it"
-		else
-			die "$p is not available for $H_SUITE/$H_ARCH"
-		fi
+		if resolve_pkg "$p"; then FETCH_PKGS+=("$p"); else warn "$p is not available for $H_SUITE/$H_ARCH; skipping it"; fi
 	done
+	[[ " ${FETCH_PKGS[*]} " == *-theme\ * ]] || die "no theme packages are available for $H_SUITE/$H_ARCH"
 
 	# A Raspberry Pi package must never replace a package from the APT sources.
 	for p in "${FETCH_PKGS[@]}"; do
@@ -1314,15 +1340,17 @@ resolve_all() {
 		fi
 	done
 
-	# Debian helpers: the GTK 2 pixmap engine, the icon theme the Pi icons
-	# inherit, the monospace font, the sound theme and, for PiXflat icons,
-	# libgtk2.0-bin.
-	helpers=(gtk2-engines-pixbuf "$T_ICON_FALLBACK" "$(_mono_font_pkg "$H_SUITE")" sound-theme-freedesktop)
-	[[ " ${T_THEME_PKGS[*]} " == *" pixflat-icons "* ]] && helpers+=(libgtk2.0-bin)
+	# Debian helpers: the GTK 2 pixmap engine, the sound theme, the monospace
+	# font, and the icon themes the Pi icons inherit.
+	helpers=(gtk2-engines-pixbuf sound-theme-freedesktop)
+	(( O_WITH_FONT )) && helpers+=("$(_mono_font_pkg "$H_SUITE")")
+	[[ " ${FETCH_PKGS[*]} " == *" pixflat-icons "* ]] && helpers+=(libgtk2.0-bin gnome-icon-theme)
+	[[ " ${FETCH_PKGS[*]} " == *" rpd-icons "* ]] && helpers+=(gnome-icon-theme)
+	[[ " ${FETCH_PKGS[*]} " == *" pixtrix-icons "* ]] && helpers+=(adwaita-icon-theme-legacy)
 	(( O_QT )) && helpers+=(qt5-gtk-platformtheme qt6-gtk-platformtheme)
 	APT_PKGS=()
 	for p in "${helpers[@]}"; do
-		[[ -n $(_installed_version "$p") ]] && continue
+		[[ " ${APT_PKGS[*]} " == *" $p "* || -n $(_installed_version "$p") ]] && continue
 		if [[ -n $O_REPO ]] || apt_has "$p"; then APT_PKGS+=("$p"); fi
 	done
 
@@ -1340,9 +1368,6 @@ resolve_all() {
 		done
 	fi
 	for p in "${FETCH_PKGS[@]}" "${APT_PKGS[@]}"; do IN_SET[$p]=1; done
-	if (( O_LIGHTDM )) && [[ ! -x /usr/sbin/lightdm-gtk-greeter ]]; then
-		warn "lightdm-gtk-greeter is not installed; the greeter configuration will be inactive"
-	fi
 }
 
 # Refresh the APT lists, so dependencies come from the current Debian point
@@ -1455,9 +1480,8 @@ _check_origins() {
 	done < <(grep '^Inst ' <<<"$1")
 }
 
-# Download, verify and install the packages, then build and install
-# pixflat-theme-debian. APT never removes packages (--no-remove) and, offline,
-# never downloads (--no-download).
+# Download, verify and install the packages. APT never removes packages
+# (--no-remove) and, offline, never downloads (--no-download).
 install_all() {
 	local p f cur sim
 	local -a files=() before=() opts=(-y --no-remove -o Dpkg::Use-Pty=0)
@@ -1498,15 +1522,21 @@ install_all() {
 	fi
 	if (( O_DRY_RUN )); then ok "Raspberry Pi OS packages installed"; else _verify_installed; fi
 
+	_record_installed "${before[@]}"
+}
+
+# Build and install pixflat-theme-debian for the installed themes (and, with
+# --lightdm, the chosen theme for the login screen).
+install_local_pkg() {
+	local f
 	step "Building the Debian compatibility package ($APP_PKG)"
 	if (( O_DRY_RUN )); then
 		log "   [dry-run] generate cursor aliases and Xfwm4 themes; install $APP_PKG"
-	else
-		f=$(build_local_pkg)
-		as_root env DEBIAN_FRONTEND=noninteractive apt-get install "${opts[@]}" "$f" >/dev/null
-		ok "Installed $(basename "$f")"
+		return 0
 	fi
-	_record_installed "${before[@]}"
+	f=$(build_local_pkg)
+	as_root env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-remove -o Dpkg::Use-Pty=0 "$f" >/dev/null
+	ok "Installed $(basename "$f")"
 }
 
 # ---------------------------------------------------------------------------
@@ -2390,8 +2420,8 @@ run_user_phase() {
 # Update check
 # ---------------------------------------------------------------------------
 
-# --check: list the installed Raspberry Pi OS packages (or those of -t THEME)
-# with the newest compatible version, and the Debian helpers with their APT
+# --check: list the installed Raspberry Pi OS packages with the newest
+# compatible version, and the Debian helpers with their APT
 # candidate. Changes nothing and needs no root rights.
 do_check() {
 	local p st cur cand n=0
@@ -2399,14 +2429,9 @@ do_check() {
 	preflight_tools
 	[[ -z $O_REPO ]] || verify_repo
 	pick_suite
-	if [[ -n $O_THEME ]]; then
-		set_theme "$O_THEME"
-		pkgs=("${T_THEME_PKGS[@]}" "$T_FONT_PKG" "$T_WALL_PKG")
-	else
-		for p in $(_bundle_rpi_pkgs trixie); do
-			if [[ -n $(_installed_version "$p") ]]; then pkgs+=("$p"); fi
-		done
-	fi
+	for p in $(_bundle_rpi_pkgs trixie); do
+		if [[ -n $(_installed_version "$p") ]]; then pkgs+=("$p"); fi
+	done
 	if (( ${#pkgs[@]} == 0 )); then info "No Raspberry Pi OS theme packages are installed."; return 0; fi
 	if [[ -z $O_REPO ]]; then
 		setup_keyring
@@ -2438,7 +2463,7 @@ do_check() {
 
 	log ""
 	if (( n )); then
-		info "$n Raspberry Pi OS package(s) can be installed or updated: run $(_self_cmd)${O_THEME:+ -t $O_THEME}"
+		info "$n Raspberry Pi OS package(s) can be updated: run $(_self_cmd)"
 	else
 		ok "The Raspberry Pi OS packages are up to date"
 	fi
@@ -2484,60 +2509,100 @@ banner() {
 	else log "${C_D}  Online installer · official packages from archive.raspberrypi.org${C_0}"; fi
 }
 
-# Ask which theme to install.
-choose_theme() {
-	local new_ok=1 ans def=1
-	[[ -n $H_SUITE ]] && (( $(_suite_rank "$H_SUITE") < 3 )) && new_ok=0
-	[[ $(_default_theme) == pixtrix ]] && def=3
-	log ""
-	log "  ${C_B}Select a theme${C_0}"
-	log "   1) PiXflat   light · Raspberry Pi OS Bookworm"
-	log "   2) PiXnoir   dark  · Raspberry Pi OS Bookworm"
-	if (( new_ok )); then
-		log "   3) PiXtrix   light · Raspberry Pi OS Trixie"
-		log "   4) PiXonyx   dark  · Raspberry Pi OS Trixie"
-	else
-		log "   ${C_D}3) PiXtrix   light · Raspberry Pi OS Trixie   (needs Debian 13+)${C_0}"
-		log "   ${C_D}4) PiXonyx   dark  · Raspberry Pi OS Trixie   (needs Debian 13+)${C_0}"
-	fi
-	log "   5) PiX       legacy · Raspberry Pi OS Buster/Bullseye"
+# Succeed if a package is installed, or about to be installed in a dry run.
+_have_pkg() {
+	[[ -n $(_installed_version "$1") ]] && return 0
+	(( O_DRY_RUN )) && [[ " ${FETCH_PKGS[*]} " == *" $1 "* ]]
+}
+
+# Show a numbered menu and set REPLY to the chosen index (from 0).
+# Usage: _menu PROMPT DEFAULT-NUMBER ALLOW-ZERO ITEM...
+_menu() {
+	local prompt=$1 def=$2 zero=$3 ans i; shift 3
+	for i in $(seq 1 $#); do log "   $i) ${!i}"; done
+	(( zero )) && log "   0) Keep my current desktop"
 	while :; do
-		read -r -p "  Choice [$def]: " ans </dev/tty || ans=""
-		case ${ans:-$def} in
-			1) O_THEME=pixflat ;; 2) O_THEME=pixnoir ;; 5) O_THEME=pix ;;
-			3) if (( new_ok )); then O_THEME=pixtrix; fi ;;
-			4) if (( new_ok )); then O_THEME=pixonyx; fi ;;
-		esac
-		[[ -n $O_THEME ]] && break
+		read -r -p "  $prompt [$def]: " ans </dev/tty || ans=""
+		ans=${ans:-$def}
+		if (( zero )) && [[ $ans == 0 ]]; then REPLY=-1; return 0; fi
+		if [[ $ans =~ ^[0-9]+$ ]] && (( ans >= 1 && ans <= $# )); then REPLY=$(( ans - 1 )); return 0; fi
 		warn "please enter a number from the list"
 	done
 }
 
-# Summarise what will be done.
-print_plan() {
-	local p total=0 wall src
-	for p in "${FETCH_PKGS[@]}"; do total=$(( total + ${PKG_SIZE[$p]:-0} )); done
-	wall=$(_wallpaper_path)
-	step "Plan"
-	log "  Theme        $T_DESC"
-	log "  GTK / window $T_GTK / $T_WM (Openbox, labwc; Xfwm4 generated)"
-	log "  Icons/cursor $T_ICON_BASE-Debian (official $T_ICON_BASE + cursor-name aliases)"
-	log "  Font         ${T_FONT:-unchanged}"
-	log "  Wallpaper    ${wall:-unchanged}"
-	if (( O_DO_INSTALL )); then
-		if [[ -n $O_REPO ]]; then src="the offline repository"; else src="$RPI_ARCHIVE"; fi
-		log "  Packages     from $src ($H_SUITE, $H_ARCH), up to $(human_size "$total")"
-		for p in "${FETCH_PKGS[@]}"; do _pkg_line "$p" "${PKG_VER[$p]}" "$(_pkg_status "$p")"; done
-		for p in "${APT_PKGS[@]}"; do _pkg_line "$p" "(APT)" "new, from your Debian sources"; done
+# Choose the theme and icon set to apply among the installed ones. -t and
+# --icons choose without asking; with -y (or without a terminal) the theme
+# matching the Debian release is used. Fails if the user keeps the desktop.
+choose_look() {
+	local id i def=1
+	local -a ids=() icons=() items=()
+	for id in pixflat pixnoir pixtrix pixonyx pix; do
+		if _have_pkg "$(_theme_pkg "$id")"; then ids+=("$id"); fi
+	done
+	(( ${#ids[@]} )) || die "no Raspberry Pi OS theme is installed; run $(_self_cmd) without --apply-only"
+	for id in pixflat pixtrix pix; do
+		if _have_pkg "$(_icons_pkg "$id")"; then icons+=("$id"); fi
+	done
+
+	if [[ -n $O_THEME ]]; then
+		[[ " ${ids[*]} " == *" $O_THEME "* ]] || die "theme $O_THEME is not installed (installed: ${ids[*]})"
+	elif (( ! O_INTERACTIVE )); then
+		O_THEME=$(_default_theme)
+		[[ " ${ids[*]} " == *" $O_THEME "* ]] || O_THEME=${ids[0]}
+	else
+		step "Select the theme"
+		for i in "${!ids[@]}"; do
+			set_theme "${ids[i]}"
+			items+=("$T_DESC")
+			[[ ${ids[i]} == "$(_default_theme)" ]] && def=$(( i + 1 ))
+		done
+		_menu "Theme" "$def" 1 "${items[@]}"
+		(( REPLY >= 0 )) || return 1
+		O_THEME=${ids[REPLY]}
 	fi
+
+	if [[ -n $O_ICONS ]]; then
+		[[ " ${icons[*]} " == *" $O_ICONS "* ]] || die "icon set $O_ICONS is not installed (installed: ${icons[*]})"
+	elif (( O_INTERACTIVE && ${#icons[@]} > 1 )); then
+		set_theme "$O_THEME"
+		step "Select the icons and cursors"
+		items=() def=1
+		for i in "${!icons[@]}"; do
+			case ${icons[i]} in
+				pixflat) items+=("PiXflat — Raspberry Pi OS Bookworm") ;;
+				pixtrix) items+=("PiXtrix — Raspberry Pi OS Trixie") ;;
+				pix)     items+=("PiX — legacy Raspberry Pi OS") ;;
+			esac
+			[[ ${icons[i]} == "${T_ICON_BASE,,}" ]] && def=$(( i + 1 ))
+		done
+		_menu "Icons" "$def" 0 "${items[@]}"
+		O_ICONS=${icons[REPLY]}
+	fi
+	set_theme "$O_THEME"
+
+	if (( O_INTERACTIVE && ! O_LIGHTDM )) && [[ -x /usr/sbin/lightdm-gtk-greeter ]] \
+		&& ask "Also use this theme on the LightDM login screen" n; then
+		O_LIGHTDM=1
+	fi
+}
+
+# Summarise what will be installed.
+print_plan() {
+	local p id total=0 src themes=""
+	for p in "${FETCH_PKGS[@]}"; do total=$(( total + ${PKG_SIZE[$p]:-0} )); done
+	for id in pixflat pixnoir pixtrix pixonyx pix; do
+		[[ " ${FETCH_PKGS[*]} " == *" $(_theme_pkg "$id") "* ]] && themes+="${themes:+, }$id"
+	done
+	if [[ -n $O_REPO ]]; then src="the offline repository"; else src="$RPI_ARCHIVE"; fi
+	step "Plan"
+	log "  Themes       $themes (the look is chosen after installation)"
+	log "  Packages     from $src ($H_SUITE, $H_ARCH), up to $(human_size "$total")"
+	for p in "${FETCH_PKGS[@]}"; do _pkg_line "$p" "${PKG_VER[$p]}" "$(_pkg_status "$p")"; done
+	for p in "${APT_PKGS[@]}"; do _pkg_line "$p" "(APT)" "new, from your Debian sources"; done
 	if (( O_DO_APPLY )); then
 		log "  User         ${S_USER:-none}"
 		log "  Desktops     ${DESKTOPS[*]:-none detected (GTK configuration files only)}"
 	fi
-	local extras=()
-	(( O_LIGHTDM )) && extras+=("LightDM greeter")
-	(( O_QT )) && extras+=("Qt follows GTK")
-	(( ${#extras[@]} )) && log "  Extras       ${extras[*]}"
 	(( O_DRY_RUN )) && log "  ${C_Y}Dry run: nothing will be changed${C_0}"
 	return 0
 }
@@ -2579,40 +2644,29 @@ main() {
 		preflight_tools
 		[[ -z $O_REPO ]] || verify_repo
 		pick_suite
-	fi
-	if [[ -z $O_THEME ]]; then
-		if (( O_INTERACTIVE )); then choose_theme; else O_THEME=$(_default_theme); fi
-	fi
-	if (( O_INTERACTIVE && O_DO_INSTALL && O_WITH_WALLPAPER && ! O_4K )) && [[ -z $O_WALLPAPER ]] \
-		&& ask "Use the 4K wallpapers (about 100 MB instead of 26-45 MB)" n; then
-		O_4K=1
-	fi
-	set_theme "$O_THEME"
-
-	if (( O_DO_INSTALL )); then
-		check_theme_supported
-		if (( O_INTERACTIVE && ! O_LIGHTDM )) && [[ -x /usr/sbin/lightdm-gtk-greeter ]] \
-			&& ask "Also theme the LightDM login screen" n; then
-			O_LIGHTDM=1
-		fi
 		resolve_all
-	fi
-
-	print_plan
-	ask "Proceed" y || die "aborted"
-
-	if (( O_DO_INSTALL )); then
+		print_plan
+		ask "Proceed" y || die "aborted"
 		prepare_root
 		install_all
 	fi
-	if (( O_DO_APPLY )); then
-		run_user_phase apply_main
+
+	# Choose the look now that the themes are installed, then build the
+	# compatibility package (it includes the login screen theme) and apply.
+	local applied=0
+	if (( O_DO_APPLY )) && choose_look; then applied=1; fi
+	if (( O_DO_INSTALL || (applied && O_LIGHTDM) )); then
+		prepare_root
+		install_local_pkg
 	fi
+	if (( applied )); then run_user_phase apply_main; fi
 
 	log ""
-	ok "${C_B}Done.${C_0} $T_DESC is ready."
-	if (( O_DO_INSTALL )) && [[ -z $O_REPO ]]; then info "Run this script again at any time to update to the latest packages."; fi
-	info "To undo everything: $(_self_cmd) --uninstall"
+	if (( applied )); then ok "${C_B}Done.${C_0} $T_DESC is applied."
+	else ok "${C_B}Done.${C_0} The Raspberry Pi OS themes are installed."; fi
+	info "Change the look any time: $(_self_cmd) --apply-only (GTK theme and icons also in your desktop's appearance settings)."
+	if (( O_DO_INSTALL )); then info "Check for updates: $(_self_cmd) --check"; fi
+	info "Undo everything: $(_self_cmd) --uninstall"
 }
 
 # Run main unless this file is sourced (install-offline.sh sources it).
