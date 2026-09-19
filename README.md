@@ -152,7 +152,7 @@ panel's battery plugin draws its own.
 | Toolkit | Support |
 |---------|---------|
 | GTK 2 | Official theme with its engines: `pixflat` or `clearlookspix` from Raspberry Pi OS, `pixmap` from Debian's `gtk2-engines-pixbuf`. The installer reads each theme's `gtkrc` and installs every engine it uses. |
-| GTK 3 | Official, complete theme (`gtk-3.0`) in every variant: the toolkit Raspberry Pi OS itself uses. The legacy PiX theme has no panel styling of its own; with the Raspberry Pi panel it gets PiXflat's, in PiX colours. |
+| GTK 3 | Official, complete theme (`gtk-3.0`) in every variant: the toolkit Raspberry Pi OS itself uses. The legacy PiX theme has no panel colours or panel styling of its own, which left panel icons cut off and buttons framed; it gets what the newer themes have, in a copy for your user that loads the official theme first, so it is complete however you select it. |
 | GTK 4 / libadwaita | No official GTK 4 theme exists, and libadwaita ignores themes. Instead, the theme's own GTK 3 palette is mapped onto the named colours that GTK 4 and libadwaita read from `~/.config/gtk-4.0/gtk.css`, so window, view, header bar, sidebar, popover and accent colours match. Widget shapes stay GTK 4's own. Skip with `--no-gtk4`. |
 
 LXDE itself is GTK 2 on Debian 12 and GTK 3 on Debian 13 (lxpanel, pcmanfm,

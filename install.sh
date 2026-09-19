@@ -2420,30 +2420,33 @@ _pi_panel_keys() {
 	done
 }
 
-# CSS for Raspberry Pi's panel. Its tray does not clear an icon before it is
-# redrawn at a new size, so nm-applet's icon would show its previous image
-# through: an opaque background in the panel colour hides it. The legacy PiX
-# theme has no panel colour or styling: it gets PiXflat's, in PiX colours.
-_pi_panel_css() {
-	local bar=bar_bg_color css
-	_theme_color bar_bg_color >/dev/null || bar=theme_bg_color
-	css="/* Tray icons on the Raspberry Pi panel: opaque, in the panel colour */
-window > image { background-color: @$bar; }"
-	if [[ $T_GTK == PiX ]]; then
-		css+='
-/* The Raspberry Pi panel style of PiXflat, for the legacy PiX theme */
-#PanelToplevel { color: @theme_fg_color; background-color: @theme_bg_color; }
+# The legacy PiX theme has no panel colours or panel styling of its own, which
+# leaves panel buttons framed and the tray without a colour to match. Give the
+# theme what the newer Raspberry Pi themes have, in a copy for this user that
+# loads the official theme first, so that it is complete whichever way it is
+# chosen (this script or the appearance settings).
+_pix_gtk_panel() {
+	local src=/usr/share/themes/PiX/gtk-3.0/gtk.css f=$HOME/.themes/PiX/gtk-3.0/gtk.css
+	[[ -f $src ]] || return 0
+	if (( O_DRY_RUN )); then log "   [dry-run] $f: panel colours and style for PiX"; return 0; fi
+	_track_file "$f"
+	cat <<EOF_PIX | _write "$f"
+/* Written by $APP_NAME: the official PiX theme, plus the panel colours and
+   style the newer Raspberry Pi OS themes have. */
+@import url("$src");
+
+@define-color bar_bg_color @theme_bg_color;
+@define-color bar_fg_color @theme_fg_color;
+
+#PanelToplevel { color: @bar_fg_color; background-color: @bar_bg_color; }
 #PanelToplevel button { padding: 2px 3px; background-image: none; border: 0px; }
 #PanelToplevel button, #PanelToplevel:backdrop button > box > label {
-  color: @theme_fg_color; background-color: @theme_bg_color; -gtk-icon-shadow: none; -gtk-icon-effect: none; }
-#PanelToplevel button:hover, #PanelToplevel button:checked:hover,
-#PanelToplevel:backdrop button:hover > box > label, #PanelToplevel:backdrop button:checked:hover > box > label {
-  background-color: shade(@theme_bg_color, 0.877); }
-#PanelToplevel button:checked, #PanelToplevel:backdrop button:checked > box > label {
-  background-color: shade(@theme_bg_color, 0.843); }
-#launchbar button { padding: 0px 0px; }'
-	fi
-	_block_set "$HOME/.config/gtk-3.0/gtk.css" "$APP_NAME-panel" "$css"
+  color: @bar_fg_color; background-color: @bar_bg_color; -gtk-icon-shadow: none; -gtk-icon-effect: none; }
+#PanelToplevel button:hover, #PanelToplevel button:checked:hover {
+  background-color: shade(@bar_bg_color, 0.877); }
+#PanelToplevel button:checked { background-color: shade(@bar_bg_color, 0.843); }
+#launchbar button { padding: 0px; }
+EOF_PIX
 }
 
 # Raspberry Pi OS lists Debian Reference in the Help menu (its own copy of the
@@ -2458,6 +2461,27 @@ _help_menu_entry() {
 	awk '/^Categories=/ { print "Categories=Help;"; found = 1; next }
 		{ print }
 		END { if (!found) print "Categories=Help;" }' "$src" | _write "$f"
+}
+
+# CSS for Raspberry Pi's panel, written for every theme, because the user can
+# change the theme in the appearance settings at any time:
+#  * its tray does not clear an icon before redrawing it at a new size, so
+#    nm-applet's icon would show its previous image through; an opaque
+#    background in the panel colour hides it;
+#  * the legacy PiX theme has no panel styling, so its buttons keep the frame
+#    and padding of ordinary buttons and cut the icons off. Only the geometry
+#    is set here, so the Raspberry Pi themes keep their own colours.
+_pi_panel_css() {
+	_pix_gtk_panel
+	_block_set "$HOME/.config/gtk-3.0/gtk.css" "$APP_NAME-panel" \
+		"/* Tray icons on the Raspberry Pi panel: opaque, in the panel colour */
+window > image { background-color: @bar_bg_color; }
+/* Panel buttons: flat and with the Raspberry Pi OS spacing, so that icons fit
+   (the legacy PiX theme styles no panel of its own) */
+#PanelToplevel button { padding: 2px 3px; margin: 0px; border: 0px; background-image: none; }
+#PanelToplevel button image { -gtk-icon-shadow: none; -gtk-icon-effect: none; }
+#launchbar button { padding: 0px; }
+#tray, #tray * { padding: 0px; margin: 0px; border: 0px; }"
 }
 
 # Start the given panel program in the LXDE session instead of the current one.
