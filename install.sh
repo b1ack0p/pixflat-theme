@@ -309,7 +309,6 @@ parse_args() {
 			--no-font)      O_WITH_FONT=0 ;;
 			--no-panel)     O_PANEL=0 ;;
 			--no-gtk4)      O_GTK4=0 ;;
-			--lightdm)      O_LIGHTDM=1 ;;
 			--no-lightdm)   O_LIGHTDM=0 ;;
 			--qt)           O_QT=1 ;;
 			--install-only) O_DO_APPLY=0 ;;
@@ -345,19 +344,19 @@ parse_args() {
 # ---------------------------------------------------------------------------
 # Set the T_* variables for a theme. --icons may choose another icon set.
 set_theme() {
-	T_ID=$1
-	case $T_ID in
-		pixflat) T_GTK=PiXflat T_WM=PiXflat T_ICON_BASE=PiXflat T_ERA=bookworm T_DARK=0
+	# T_GTK names the GTK theme and the Openbox, labwc and Xfwm4 themes alike
+	case $1 in
+		pixflat) T_GTK=PiXflat T_ICON_BASE=PiXflat T_ERA=bookworm T_DARK=0
 		         T_DESC="PiXflat — light, Raspberry Pi OS Bookworm" ;;
-		pixnoir) T_GTK=PiXnoir T_WM=PiXnoir T_ICON_BASE=PiXflat T_ERA=bookworm T_DARK=1
+		pixnoir) T_GTK=PiXnoir T_ICON_BASE=PiXflat T_ERA=bookworm T_DARK=1
 		         T_DESC="PiXnoir — dark, Raspberry Pi OS Bookworm" ;;
-		pixtrix) T_GTK=PiXtrix T_WM=PiXtrix T_ICON_BASE=PiXtrix T_ERA=trixie T_DARK=0
+		pixtrix) T_GTK=PiXtrix T_ICON_BASE=PiXtrix T_ERA=trixie T_DARK=0
 		         T_DESC="PiXtrix — light, Raspberry Pi OS Trixie" ;;
-		pixonyx) T_GTK=PiXonyx T_WM=PiXonyx T_ICON_BASE=PiXtrix T_ERA=trixie T_DARK=1
+		pixonyx) T_GTK=PiXonyx T_ICON_BASE=PiXtrix T_ERA=trixie T_DARK=1
 		         T_DESC="PiXonyx — dark, Raspberry Pi OS Trixie" ;;
-		pix)     T_GTK=PiX T_WM=PiX T_ICON_BASE=PiX T_ERA=legacy T_DARK=0
+		pix)     T_GTK=PiX T_ICON_BASE=PiX T_ERA=legacy T_DARK=0
 		         T_DESC="PiX — legacy Raspberry Pi OS Buster/Bullseye" ;;
-		*) die "unknown theme '$T_ID'" ;;
+		*) die "unknown theme '$1'" ;;
 	esac
 	if [[ $T_ERA == trixie ]]; then
 		T_FONT_FAMILY="Nunito Sans" T_FONT_WEIGHT=Light T_FONT="Nunito Sans Light 12" T_WALL_DEFAULT=sunrise.jpg
@@ -470,31 +469,28 @@ pick_suite() {
 		amd64|arm64|armhf|i386) ;;
 		*) die "architecture '$H_ARCH' is not published by archive.raspberrypi.org (amd64, arm64, armhf, i386)" ;;
 	esac
-	if [[ -n $O_SUITE ]]; then
-		H_SUITE=$O_SUITE
-	else
-		case $H_CODENAME in
-			buster|bullseye|bookworm|trixie) H_SUITE=$H_CODENAME ;;
-			forky|duke|sid)                  H_SUITE=trixie ;;
-			*)  # Derivatives: match by ABI generation (64-bit time_t transition)
-				if apt_has libglib2.0-0t64; then H_SUITE=trixie
-				elif apt_has libglib2.0-0; then H_SUITE=bookworm
-				else die "cannot determine a matching Raspberry Pi OS release; use --suite"
-				fi ;;
-		esac
-	fi
+	H_SUITE=${O_SUITE:-$(_host_suite)} || die "cannot determine a matching Raspberry Pi OS release; use --suite"
 	if [[ -n $O_REPO && ! -d $O_REPO/dists/$H_SUITE/main/binary-$H_ARCH ]]; then
 		die "the offline repository has no packages for $H_SUITE/$H_ARCH (it has: $(_repo_contents))"
 	fi
 }
 
+# Print the Raspberry Pi OS release matching this system; fail if unknown.
+_host_suite() {
+	case $H_CODENAME in
+		buster|bullseye|bookworm|trixie) echo "$H_CODENAME" ;;
+		forky|duke|sid)                  echo trixie ;;
+		*)  # Derivatives: match by ABI generation (64-bit time_t transition)
+			if apt_has libglib2.0-0t64; then echo trixie
+			elif apt_has libglib2.0-0; then echo bookworm
+			else return 1; fi ;;
+	esac
+}
+
 # Print the theme matching this Debian release: the Raspberry Pi OS Trixie look
 # (PiXtrix) on Debian 13 and newer, the Bookworm look (PiXflat) otherwise.
 _default_theme() {
-	local suite=$H_SUITE
-	if [[ -z $suite ]]; then
-		case $H_CODENAME in trixie|forky|duke|sid) suite=trixie ;; *) suite=bookworm ;; esac
-	fi
+	local suite=${H_SUITE:-$(_host_suite || echo bookworm)}
 	if (( $(_suite_rank "$suite" 2>/dev/null || echo 0) >= 3 )); then echo pixtrix; else echo pixflat; fi
 }
 
@@ -649,7 +645,7 @@ sha256_check() {
 # Fetch the Raspberry Pi archive key and convert it to a gpgv keyring.
 setup_keyring() {
 	[[ -n $KEYRING ]] && return 0
-	fetch "$RPI_KEY_URL" "$WORKDIR/rpi.asc"
+	fetch "$RPI_KEY_URL" "$WORKDIR/rpi.asc" || die "cannot download the Raspberry Pi archive key from $RPI_KEY_URL"
 	# Dearmor without gpg: decode the base64 body of the armored key.
 	awk '/^-----BEGIN PGP PUBLIC KEY BLOCK-----/ { b = 1; next }
 		/^-----END PGP PUBLIC KEY BLOCK-----/ { b = 0 }
@@ -703,7 +699,8 @@ index_load() {
 		if [[ -n $sha ]]; then comp=$c; break; fi
 	done
 	if [[ -z $comp ]]; then debug "no $arch index in $aid/$suite"; IDX_FAILED[$key]=1; return 1; fi
-	fetch "$base/dists/$suite/main/binary-$arch/Packages.$comp" "$d/Packages-$arch.$comp"
+	fetch "$base/dists/$suite/main/binary-$arch/Packages.$comp" "$d/Packages-$arch.$comp" \
+		|| die "cannot download the $suite/$arch package index from $base"
 	sha256_check "$d/Packages-$arch.$comp" "$sha"
 	if [[ $comp == xz ]]; then xz -dc "$d/Packages-$arch.$comp"; else gzip -dc "$d/Packages-$arch.$comp"; fi >"$d/Packages-$arch"
 	rm -f -- "$d/Packages-$arch.$comp"
@@ -737,7 +734,7 @@ index_candidates() {
 			}
 			if (n == p && f != "" && s != "") print v "\t" a "\t" f "\t" s "\t" z "\t" d
 		}' "$WORKDIR/index/$aid/$suite/Packages-$arch")
-	(( ${#lines[@]} )) && printf '%s\n' "${lines[@]}"
+	if (( ${#lines[@]} )); then printf '%s\n' "${lines[@]}"; fi
 }
 
 # Compare two Debian versions with a Depends operator (<<, <=, =, >=, >>).
@@ -866,7 +863,7 @@ download_pkg() {
 	if [[ ${PKG_AID[$pkg]} != local ]]; then
 		info "Downloading $pkg ${PKG_VER[$pkg]} ($(human_size "${PKG_SIZE[$pkg]}"))"
 	fi
-	fetch "$base/${PKG_FILE[$pkg]}" "$out" "$big"
+	fetch "$base/${PKG_FILE[$pkg]}" "$out" "$big" || die "cannot download $pkg from $base"
 	sha256_check "$out" "${PKG_SHA[$pkg]}"
 	chmod 0644 "$out"
 	printf '%s\n' "$out"
@@ -896,7 +893,7 @@ _closure() {
 			RS = ""; FS = "\n"
 		}
 		{
-			n = d = pr = ""
+			n = d = pr = pri = ""
 			for (i = 1; i <= NF; i++) {
 				if ($i ~ /^Package: /) n = substr($i, 10)
 				else if ($i ~ /^(Pre-)?Depends: /) { x = $i; sub(/^[^:]*: /, "", x); d = d (d == "" ? "" : ",") x }
@@ -904,7 +901,7 @@ _closure() {
 				else if ($i ~ /^Priority: /) pri = substr($i, 11)
 			}
 			if (n == "" || n in real) next
-			real[n] = 1; deps[n] = d; prio[n] = pri; pri = ""
+			real[n] = 1; deps[n] = d; prio[n] = pri
 			m = split(pr, a, ","); for (j = 1; j <= m; j++) { v = clean(a[j]); if (v != "" && !(v in prov)) prov[v] = n }
 		}
 		END {
@@ -1060,9 +1057,9 @@ _xpm() {
 }
 
 # Write an XPM image of identical rows.
-# Usage: _xpm_tile FILE WIDTH HEIGHT ROW CHAR=COLOUR...
+# Usage: _xpm_tile FILE HEIGHT ROW CHAR=COLOUR...
 _xpm_tile() {
-	local file=$1 h=$3 row=$4 i; shift 4
+	local file=$1 h=$2 row=$3 i; shift 3
 	local -a rows=()
 	for (( i = 0; i < h; i++ )); do rows+=("$row"); done
 	_xpm "$file" "$@" -- "${rows[@]}"
@@ -1143,11 +1140,11 @@ gen_xfwm4() {
 	mkdir -p "$out"
 	for st in active inactive; do
 		if [[ $st == active ]]; then bg=$a_bg fg=$a_btn bd=$a_bd cl=$a_cl; else bg=$i_bg fg=$i_btn bd=$i_bd cl=$i_cl; fi
-		for n in 1 2 3 4 5; do _xpm_tile "$out/title-$n-$st.xpm" 2 "$H" "bb" "b=$bg"; done
-		_xpm_tile "$out/top-left-$st.xpm"  3 "$H" "dbb" "d=$bd" "b=$bg"
-		_xpm_tile "$out/top-right-$st.xpm" 3 "$H" "bbd" "d=$bd" "b=$bg"
-		_xpm_tile "$out/left-$st.xpm"      3 2 "dcc" "d=$bd" "c=$cl"
-		_xpm_tile "$out/right-$st.xpm"     3 2 "ccd" "d=$bd" "c=$cl"
+		for n in 1 2 3 4 5; do _xpm_tile "$out/title-$n-$st.xpm" "$H" "bb" "b=$bg"; done
+		_xpm_tile "$out/top-left-$st.xpm"  "$H" "dbb" "d=$bd" "b=$bg"
+		_xpm_tile "$out/top-right-$st.xpm" "$H" "bbd" "d=$bd" "b=$bg"
+		_xpm_tile "$out/left-$st.xpm"      2 "dcc" "d=$bd" "c=$cl"
+		_xpm_tile "$out/right-$st.xpm"     2 "ccd" "d=$bd" "c=$cl"
 		_xpm "$out/bottom-$st.xpm"       "d=$bd" "c=$cl" -- "cc" "cc" "dd"
 		_xpm "$out/bottom-left-$st.xpm"  "d=$bd" "c=$cl" -- "dcc" "dcc" "ddd"
 		_xpm "$out/bottom-right-$st.xpm" "d=$bd" "c=$cl" -- "ccd" "ccd" "ddd"
@@ -1328,7 +1325,7 @@ _art_resolve() {
 # licence from the official $ART_PKG package into $WORKDIR/login.
 _login_art() {
 	local aid=rpi deb x=$WORKDIR/art
-	[[ -n $O_REPO ]] && aid=local
+	if [[ -n $O_REPO ]]; then aid=local; else setup_keyring; fi
 	_art_resolve "$aid" || return 1
 	deb=$(download_pkg "$ART_PKG")
 	rm -rf -- "$x"; mkdir -p "$x" "$WORKDIR/login"
@@ -1336,6 +1333,13 @@ _login_art() {
 		"./usr/share/doc/$ART_PKG/copyright" || return 1
 	install -m 0644 "$x"/usr/share/rpd-wallpaper/RPiSystem*.png "$WORKDIR/login/"
 	install -m 0644 "$x/usr/share/doc/$ART_PKG/copyright" "$WORKDIR/login/copyright"
+}
+
+# Unpack the login screen wallpaper and report the result. It runs in a
+# subshell, so that a failed download does not stop the installation.
+_get_login_art() {
+	if ( _login_art ) 2>/dev/null; then ok "Login screen wallpaper from $ART_PKG (unpacked, not installed)"
+	else warn "$ART_PKG is not available; the login screen uses its background colour"; fi
 }
 
 # Build pixflat-theme-debian from the installed official themes: Xfwm4 themes,
@@ -1354,15 +1358,17 @@ build_local_pkg() {
 		gen_icon_overlay "$b" "$stage/usr/share/icons/$b-Debian"
 		icons+=("$b-Debian")
 	done
+	local art=/usr/share/$APP_PKG/login greeter=/usr/share/lightdm/lightdm-gtk-greeter.conf.d/60_$APP_NAME.conf \
+		seat=/usr/share/lightdm/lightdm.conf.d/60_$APP_NAME.conf
 	if (( O_LIGHTDM )) && [[ -n ${T_GTK:-} ]]; then
 		# The Raspberry Pi OS login screen (pi-greeter.conf) with Debian's GTK
 		# greeter: its wallpaper (the dark one for dark themes), a centred login
 		# box, the user list, the theme, icons and font, and the Debian logo as
 		# the default user picture.
-		local logo art=/usr/share/$APP_PKG/login bg=#d6d3de img=RPiSystem.png
+		local logo bg=#d6d3de img=RPiSystem.png
 		(( T_DARK )) && img=RPiSystem_dark.png
 		logo=$(_greeter_logo || true)
-		mkdir -p "$stage$art" "$stage/usr/share/lightdm/lightdm-gtk-greeter.conf.d" "$stage/usr/share/lightdm/lightdm.conf.d"
+		mkdir -p "$stage$art" "$stage${greeter%/*}" "$stage${seat%/*}"
 		# Downloaded now, else kept from the installed package (--apply-only)
 		if cp -- "$WORKDIR"/login/* "$stage$art/" 2>/dev/null || cp -- "$art"/* "$stage$art/" 2>/dev/null; then
 			[[ -f $stage$art/$img ]] || img=RPiSystem.png
@@ -1378,10 +1384,15 @@ build_local_pkg() {
 			printf 'xft-antialias=true\nxft-hintstyle=hintfull\nxft-rgba=rgb\n'
 			printf 'background=%s\nuser-background=false\nposition=50%%,center 50%%,center\nindicators=~spacer\n' "$bg"
 			if [[ -n $logo ]]; then printf 'default-user-image=%s\n' "$logo"; fi
-		} >"$stage/usr/share/lightdm/lightdm-gtk-greeter.conf.d/60_$APP_NAME.conf"
+		} >"$stage$greeter"
 		# Raspberry Pi OS lists the users to choose from (pi-greeter's postinst)
 		printf '# Installed by %s: list users, as Raspberry Pi OS does\n[Seat:*]\ngreeter-hide-users=false\n' \
-			"$APP_NAME" >"$stage/usr/share/lightdm/lightdm.conf.d/60_$APP_NAME.conf"
+			"$APP_NAME" >"$stage$seat"
+	elif (( O_LIGHTDM )); then
+		# No look chosen (--install-only): keep the installed login screen style
+		for f in "$greeter" "$seat" "$art"; do
+			if [[ -e $f ]]; then mkdir -p "$stage${f%/*}"; cp -a -- "$f" "$stage$f"; fi
+		done
 	fi
 
 	ver="${APP_VERSION}+$(date -u +%Y%m%d%H%M%S)"
@@ -1667,10 +1678,9 @@ install_all() {
 		fi
 	done
 	(( O_DRY_RUN )) || _add_theme_engines files
-	if (( O_LIGHTDM )); then
+	if (( O_LIGHTDM && O_DO_APPLY )); then
 		if (( O_DRY_RUN )); then log "   [dry-run] unpack the login screen wallpaper from $ART_PKG (not installed)"
-		elif _login_art; then ok "Login screen wallpaper from $ART_PKG ${PKG_VER[$ART_PKG]} (unpacked, not installed)"
-		else warn "$ART_PKG is not available; the login screen uses its background colour"; fi
+		else _get_login_art; fi
 	fi
 	for p in "${FETCH_PKGS[@]}" "${APT_PKGS[@]}"; do
 		[[ -n $(_installed_version "$p") ]] || before+=("$p")
@@ -1705,8 +1715,12 @@ install_local_pkg() {
 	local f
 	step "Building the Debian compatibility package ($APP_PKG)"
 	if (( O_DRY_RUN )); then
-		log "   [dry-run] generate cursor aliases and Xfwm4 themes; install $APP_PKG"
+		log "   [dry-run] generate icon overlays, Xfwm4 themes and the login screen style; install $APP_PKG"
 		return 0
+	fi
+	# --apply-only on a system installed without the login screen wallpaper
+	if (( O_LIGHTDM )) && [[ -n ${T_GTK:-} && ! -d $WORKDIR/login && ! -d /usr/share/$APP_PKG/login ]]; then
+		_get_login_art
 	fi
 	f=$(build_local_pkg)
 	as_root env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-remove -o Dpkg::Use-Pty=0 "$f" >/dev/null
@@ -1862,7 +1876,8 @@ build_offline_repo() {
 			# dependencies are not bundled
 			if [[ $suite == "$ART_SUITE" ]]; then
 				_art_resolve rpi || die "$ART_PKG is not available for $suite/$arch"
-				_stage_pkg "$stage" "$idx" "$ART_PKG" "$(download_pkg "$ART_PKG")"
+				f=$(download_pkg "$ART_PKG")
+				_stage_pkg "$stage" "$idx" "$ART_PKG" "$f"
 				ok "$ART_PKG ${PKG_VER[$ART_PKG]} (Raspberry Pi OS $suite; login screen wallpaper)"
 			fi
 			# Debian packages: the dependency closure of everything bundled, minus
@@ -2097,10 +2112,10 @@ _xml_fonts() {
 # Usage: _openbox_rc FILE [THEME-ONLY]
 _openbox_rc() {
 	local file=$1 theme_only=${2:-0} fonts
-	if (( O_DRY_RUN )); then log "   [dry-run] $file: Raspberry Pi OS Openbox settings, theme $T_WM"; return 0; fi
+	if (( O_DRY_RUN )); then log "   [dry-run] $file: Raspberry Pi OS Openbox settings, theme $T_GTK"; return 0; fi
 	_track_file "$file"
 	fonts=$(_xml_fonts "$file" ActiveWindow InactiveWindow MenuHeader MenuItem ActiveOnScreenDisplay InactiveOnScreenDisplay)
-	_xml_block "$file" theme "$(printf '  <theme>\n    <name>%s</name>\n    <titleLayout>LIMC</titleLayout>\n    <keepBorder>yes</keepBorder>\n    <roundCorners>yes</roundCorners>\n    <invisibleHandles>yes</invisibleHandles>\n    <animateIconify>yes</animateIconify>\n%s\n  </theme>' "$T_WM" "$fonts")"
+	_xml_block "$file" theme "$(printf '  <theme>\n    <name>%s</name>\n    <titleLayout>LIMC</titleLayout>\n    <keepBorder>yes</keepBorder>\n    <roundCorners>yes</roundCorners>\n    <invisibleHandles>yes</invisibleHandles>\n    <animateIconify>yes</animateIconify>\n%s\n  </theme>' "$T_GTK" "$fonts")"
 	(( theme_only )) && return 0
 	_xml_child "$file" desktops number 1
 	_xml_child "$file" focus focusDesktop yes
@@ -2111,10 +2126,10 @@ _openbox_rc() {
 # section, window snapping and the window switcher.
 _labwc_rc() {
 	local file=$1 fonts
-	if (( O_DRY_RUN )); then log "   [dry-run] $file: Raspberry Pi OS labwc settings, theme $T_WM"; return 0; fi
+	if (( O_DRY_RUN )); then log "   [dry-run] $file: Raspberry Pi OS labwc settings, theme $T_GTK"; return 0; fi
 	_track_file "$file"
 	fonts=$(_xml_fonts "$file" ActiveWindow InactiveWindow OnScreenDisplay MenuItem)
-	_xml_block "$file" theme "$(printf '  <theme>\n    <name>%s</name>\n    <cornerRadius>0</cornerRadius>\n    <keepBorder>yes</keepBorder>\n%s\n    <dropShadows>yes</dropShadows>\n    <titlebar>\n      <layout>:iconify,max,close</layout>\n    </titlebar>\n  </theme>' "$T_WM" "$fonts")"
+	_xml_block "$file" theme "$(printf '  <theme>\n    <name>%s</name>\n    <cornerRadius>0</cornerRadius>\n    <keepBorder>yes</keepBorder>\n%s\n    <dropShadows>yes</dropShadows>\n    <titlebar>\n      <layout>:iconify,max,close</layout>\n    </titlebar>\n  </theme>' "$T_GTK" "$fonts")"
 	# Window snapping and the window switcher, as in Raspberry Pi OS
 	_xml_block "$file" snapping '  <snapping>
     <range>0</range>
@@ -2137,56 +2152,63 @@ _launcher() {
 	return 1
 }
 
-# Write the Raspberry Pi OS panel (raspberrypi-ui-mods / rpd-x-core) with
-# Debian's lxpanel plugins: the same geometry and colours, menu with the
-# Debian logo, launchers for browser, file manager and terminal, taskbar,
-# tray, volume, clock and battery. Pi-only plugins have no Debian counterpart;
-# network and Bluetooth appear in the tray through Debian's applets.
+# Print the parts of the Raspberry Pi OS panel (raspberrypi-ui-mods /
+# rpd-x-core) that both panel programs share. Usage: _panel_global [KEY=VALUE]...
+_panel_global() {
+	printf 'Global {\n'
+	printf '  %s\n' edge=top align=left margin=0 widthtype=percent width=100 height=36 transparent=0 \
+		tintcolor=#000000 alpha=0 autohide=0 heightwhenhidden=2 setdocktype=1 setpartialstrut=1 \
+		usefontcolor=0 fontsize=12 fontcolor=#ffffff usefontsize=0 background=0 \
+		backgroundfile=/usr/share/lxpanel/images/background.png iconsize=36 monitor=0 "$@"
+	printf '}\n'
+}
+# Usage: _panel_plugin TYPE [CONFIG-LINE]...
+_panel_plugin() {
+	local t=$1; shift
+	printf 'Plugin {\n  type=%s\n' "$t"
+	[[ $t == taskbar ]] && printf '  expand=1\n'
+	printf '  Config {\n'
+	if (( $# )); then printf '    %s\n' "$@"; fi
+	printf '  }\n}\n'
+}
+# The launchers for web browser, file manager and terminal, then the taskbar.
+_panel_tasks() {
+	local id
+	local -a buttons=()
+	for id in "$(_launcher x-www-browser.desktop lxde-x-www-browser.desktop firefox-esr.desktop chromium.desktop)" \
+		"$(_launcher pcmanfm.desktop)" "$(_launcher x-terminal-emulator.desktop lxterminal.desktop lxde-x-terminal-emulator.desktop)"; do
+		if [[ -n $id ]]; then buttons+=("Button {" "  id=$id" "}"); fi
+	done
+	_panel_plugin space Size=4
+	_panel_plugin launchbar "${buttons[@]}"
+	_panel_plugin space Size=8
+	_panel_plugin taskbar tooltips=1 IconsOnly=0 ShowAllDesks=0 UseMouseWheel=1 UseUrgencyHint=1 FlatButton=0 \
+		MaxTaskWidth=200 spacing=1 GroupedTasks=0
+	_panel_plugin space Size=2
+}
+
+# Write the Raspberry Pi OS panel for Debian's lxpanel: menu with the Debian
+# logo, launchers, taskbar, tray, volume, clock and battery. Pi-only plugins
+# have no Debian counterpart; network and Bluetooth appear in the tray through
+# Debian's applets.
 _lxpanel_write() {
-	local file=$1 id plugins='/usr/lib/*/lxpanel/plugins'
-	local -a launchers=()
+	local file=$1 plugins='/usr/lib/*/lxpanel/plugins'
 	if (( O_DRY_RUN )); then log "   [dry-run] $file: Raspberry Pi OS panel layout"; return 0; fi
 	_track_file "$file"
-	for id in "$(_launcher lxde-x-www-browser.desktop x-www-browser.desktop firefox-esr.desktop chromium.desktop)" \
-		"$(_launcher pcmanfm.desktop)" "$(_launcher lxterminal.desktop lxde-x-terminal-emulator.desktop)"; do
-		if [[ -n $id ]]; then launchers+=("$id"); fi
-	done
 	{
 		printf '# lxpanel <profile> config file. Manually editing is not recommended.\n'
 		printf '# Use preference dialog in lxpanel to adjust config when you can.\n\n'
-		printf 'Global {\n'
-		printf '  %s\n' edge=top align=left margin=0 widthtype=percent width=100 height=36 transparent=0 \
-			tintcolor=#000000 alpha=0 autohide=0 heightwhenhidden=2 setdocktype=1 setpartialstrut=1 \
-			usefontcolor=0 fontsize=12 fontcolor=#ffffff usefontsize=0 background=0 \
-			backgroundfile=/usr/share/lxpanel/images/background.png iconsize=36 monitor=0 point_at_menu=0
-		printf '}\n'
-		printf 'Plugin {\n  type=menu\n  Config {\n    image=%s\n' "${A_LOGO:-start-here}"
-		printf '    system {\n    }\n    separator {\n    }\n    item {\n      image=system-run\n      command=run\n    }\n'
-		printf '    separator {\n    }\n    item {\n      image=system-shutdown\n      command=logout\n    }\n  }\n}\n'
-		[[ $T_ERA == trixie ]] && printf 'Plugin {\n  type=separator\n  Config {\n  }\n}\n'
-		printf 'Plugin {\n  type=space\n  Config {\n    Size=4\n  }\n}\n'
-		printf 'Plugin {\n  type=launchbar\n  Config {\n'
-		for id in "${launchers[@]}"; do printf '    Button {\n      id=%s\n    }\n' "$id"; done
-		printf '  }\n}\n'
-		printf 'Plugin {\n  type=space\n  Config {\n    Size=8\n  }\n}\n'
-		printf 'Plugin {\n  type=taskbar\n  expand=1\n  Config {\n'
-		printf '    %s\n' tooltips=1 IconsOnly=0 ShowAllDesks=0 UseMouseWheel=1 UseUrgencyHint=1 FlatButton=0 \
-			MaxTaskWidth=200 spacing=1 GroupedTasks=0
-		printf '  }\n}\n'
-		printf 'Plugin {\n  type=space\n  Config {\n    Size=2\n  }\n}\n'
-		printf 'Plugin {\n  type=tray\n  Config {\n  }\n}\n'
-		if compgen -G "$plugins/volume.so" >/dev/null; then
-			printf 'Plugin {\n  type=space\n  Config {\n    Size=2\n  }\n}\n'
-			printf 'Plugin {\n  type=volume\n  Config {\n  }\n}\n'
-		fi
-		printf 'Plugin {\n  type=space\n  Config {\n    Size=2\n  }\n}\n'
-		printf 'Plugin {\n  type=dclock\n  Config {\n'
-		printf '    %s\n' ClockFmt=%R 'TooltipFmt=%A %x' BoldFont=0 IconOnly=0 CenterText=1
-		printf '  }\n}\n'
-		if compgen -G "$plugins/batt.so" >/dev/null; then
-			printf 'Plugin {\n  type=space\n  Config {\n    Size=2\n  }\n}\n'
-			printf 'Plugin {\n  type=batt\n  Config {\n    HideIfNoBattery=1\n  }\n}\n'
-		fi
+		_panel_global point_at_menu=0
+		_panel_plugin menu "image=${A_LOGO:-start-here}" "system {" "}" "separator {" "}" \
+			"item {" "  image=system-run" "  command=run" "}" "separator {" "}" \
+			"item {" "  image=system-shutdown" "  command=logout" "}"
+		[[ $T_ERA == trixie ]] && _panel_plugin separator
+		_panel_tasks
+		_panel_plugin tray
+		if compgen -G "$plugins/volume.so" >/dev/null; then _panel_plugin space Size=2; _panel_plugin volume; fi
+		_panel_plugin space Size=2
+		_panel_plugin dclock ClockFmt=%R 'TooltipFmt=%A %x' BoldFont=0 IconOnly=0 CenterText=1
+		if compgen -G "$plugins/batt.so" >/dev/null; then _panel_plugin space Size=2; _panel_plugin batt HideIfNoBattery=1; fi
 	} | _write "$file"
 }
 
@@ -2194,37 +2216,17 @@ _lxpanel_write() {
 # program, without the plugins that do not work on Debian (updater, power,
 # network; nm-applet shows the network icons in the tray).
 _pi_panel_write() {
-	local file=$1 id p
-	local -a launchers=()
+	local file=$1 p
 	if (( O_DRY_RUN )); then log "   [dry-run] $file: Raspberry Pi OS panel (lxpanel-pi)"; return 0; fi
 	_track_file "$file"
-	for id in "$(_launcher x-www-browser.desktop lxde-x-www-browser.desktop firefox-esr.desktop chromium.desktop)" \
-		"$(_launcher pcmanfm.desktop)" "$(_launcher x-terminal-emulator.desktop lxterminal.desktop lxde-x-terminal-emulator.desktop)"; do
-		if [[ -n $id ]]; then launchers+=("$id"); fi
-	done
 	{
-		printf 'Global {\n'
-		printf '  %s\n' edge=top align=left margin=0 widthtype=percent width=100 height=36 transparent=0 \
-			tintcolor=#000000 alpha=0 autohide=0 heightwhenhidden=2 setdocktype=1 setpartialstrut=1 \
-			usefontcolor=0 fontsize=12 fontcolor=#ffffff usefontsize=0 background=0 \
-			backgroundfile=/usr/share/lxpanel/images/background.png iconsize=36 monitor=0
-		printf '}\n'
-		printf 'Plugin {\n  type=%s\n  Config {\n  }\n}\n' smenu separator
-		printf 'Plugin {\n  type=space\n  Config {\n    Size=4\n  }\n}\n'
-		printf 'Plugin {\n  type=launchbar\n  Config {\n'
-		for id in "${launchers[@]}"; do printf '    Button {\n      id=%s\n    }\n' "$id"; done
-		printf '  }\n}\n'
-		printf 'Plugin {\n  type=space\n  Config {\n    Size=8\n  }\n}\n'
-		printf 'Plugin {\n  type=taskbar\n  expand=1\n  Config {\n'
-		printf '    %s\n' tooltips=1 IconsOnly=0 ShowAllDesks=0 UseMouseWheel=1 UseUrgencyHint=1 FlatButton=0 \
-			MaxTaskWidth=200 spacing=1 GroupedTasks=0
-		printf '  }\n}\n'
-		printf 'Plugin {\n  type=space\n  Config {\n    Size=2\n  }\n}\n'
-		printf 'Plugin {\n  type=%s\n  Config {\n  }\n}\n' tray ejecter
-		for p in bluetooth volumepulse clock batt magnifier; do
-			printf 'Plugin {\n  type=space\n  Config {\n    Size=2\n  }\n}\n'
-			printf 'Plugin {\n  type=%s\n  Config {\n  }\n}\n' "$p"
-		done
+		_panel_global
+		_panel_plugin smenu
+		_panel_plugin separator
+		_panel_tasks
+		_panel_plugin tray
+		_panel_plugin ejecter
+		for p in bluetooth volumepulse clock batt magnifier; do _panel_plugin space Size=2; _panel_plugin "$p"; done
 	} | _write "$file"
 }
 
@@ -2574,8 +2576,8 @@ apply_de_lxde() {
 	_ini_set "$f" places places_home 1 places_desktop 0 places_root 1 places_computer 0 places_trash 0 \
 		places_applications 0 places_network 0 places_unmounted 1 places_volmounts 1
 
-	# Panel, menu and tray: set up on the first installation only, so plugins
-	# and applets the user adds or removes later are kept.
+	# Panel and menu: set up on the first installation only, so plugins the
+	# user adds or removes later are kept. Extra tray applets are hidden once each.
 	if (( O_PANEL )) && _once lxde-panel; then
 		if (( O_PI_PANEL )); then   # Debian 13 and later: Raspberry Pi's own panel
 			_pi_panel_write "$HOME/.config/lxpanel-pi/panels/panel"
@@ -2638,10 +2640,10 @@ apply_de_xfce() {
 		xf_set xsettings /Net/EnableEventSounds bool true
 		xf_set xsettings /Net/EnableInputFeedbackSounds bool true
 	fi
-	if [[ -f /usr/share/themes/$T_WM/xfwm4/themerc ]]; then
-		xf_set xfwm4 /general/theme string "$T_WM"
+	if [[ -f /usr/share/themes/$T_GTK/xfwm4/themerc ]]; then
+		xf_set xfwm4 /general/theme string "$T_GTK"
 	else
-		warn "no Xfwm4 theme for $T_WM found; window borders unchanged"
+		warn "no Xfwm4 theme for $T_GTK found; window borders unchanged"
 	fi
 	if [[ -n $T_FONT ]]; then xf_set xfwm4 /general/title_font string "$T_FONT"; fi
 	xf_set xfwm4 /general/title_alignment string center
@@ -2935,7 +2937,8 @@ do_check() {
 
 	step "Debian packages (updated by APT)"
 	for p in gtk2-engines-pixbuf libgtk2.0-bin gnome-icon-theme adwaita-icon-theme-legacy \
-		fonts-liberation fonts-liberation2 sound-theme-freedesktop; do
+		fonts-liberation fonts-liberation2 sound-theme-freedesktop network-manager-applet \
+		network-manager-gnome blueman; do
 		cur=$(_installed_version "$p")
 		[[ -n $cur ]] || continue
 		cand=$(LC_ALL=C apt-cache policy "$p" 2>/dev/null | awk '/Candidate:/ { print $2 }')
@@ -3020,8 +3023,9 @@ _menu() {
 # --icons choose without asking; with -y (or without a terminal) the theme
 # matching the Debian release is used. Fails if the user keeps the desktop.
 choose_look() {
-	local id i def=1
+	local id i def=1 dflt
 	local -a ids=() icons=() items=()
+	dflt=$(_default_theme)
 	for id in pixflat pixnoir pixtrix pixonyx pix; do
 		if _have_pkg "$(_theme_pkg "$id")"; then ids+=("$id"); fi
 	done
@@ -3033,14 +3037,14 @@ choose_look() {
 	if [[ -n $O_THEME ]]; then
 		[[ " ${ids[*]} " == *" $O_THEME "* ]] || die "theme $O_THEME is not installed (installed: ${ids[*]})"
 	elif (( ! O_INTERACTIVE )); then
-		O_THEME=$(_default_theme)
+		O_THEME=$dflt
 		[[ " ${ids[*]} " == *" $O_THEME "* ]] || O_THEME=${ids[0]}
 	else
 		step "Select the theme"
 		for i in "${!ids[@]}"; do
 			set_theme "${ids[i]}"
 			items+=("$T_DESC")
-			[[ ${ids[i]} == "$(_default_theme)" ]] && def=$(( i + 1 ))
+			[[ ${ids[i]} == "$dflt" ]] && def=$(( i + 1 ))
 		done
 		_menu "Theme" "$def" 1 "${items[@]}"
 		(( REPLY >= 0 )) || return 1

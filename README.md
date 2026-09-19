@@ -63,7 +63,7 @@ your release is applied without asking.
 Change the look at any time without downloading anything:
 
 ```sh
-./install.sh --apply-only        # the same menus again: theme, icons, fonts, wallpaper, panel
+./install.sh --apply-only        # the same menus again; fonts, wallpaper and windows follow the theme
 ```
 
 Your desktop's appearance settings (e.g. LXAppearance, Xfce Appearance) also list
@@ -99,9 +99,10 @@ and PiX, Nunito Sans for PiXtrix and PiXonyx.
 
 The values are the ones Raspberry Pi OS itself uses, taken from its
 configuration packages (`raspberrypi-ui-mods` for Bookworm, `rpd-common`,
-`rpd-x-core` and `rpd-wayland-core` for Trixie). Only Debian's own programs and
-plugins are used; Raspberry Pi's modified panel and file manager are not
-installed.
+`rpd-x-core` and `rpd-wayland-core` for Trixie). Debian's own programs are used,
+except on Debian 13 with LXDE, where Raspberry Pi's own panel and Shutdown
+dialog are installed (they are built for Debian 13). Raspberry Pi's modified
+file manager and system tools are never installed.
 
 | Area | Raspberry Pi OS settings applied |
 |------|----------------------------------|
@@ -131,9 +132,9 @@ through their own settings system:
 | Openbox, labwc | the Raspberry Pi OS window settings above; labwc also cursor and GTK settings |
 | KDE Plasma | icons and cursor (Plasma and Qt keep Breeze) |
 
-The panel, application menu and tray are set up on the **first installation
-only**. Plugins and applets you add or remove later are kept when you update or
-change the look. Every change to your settings is backed up first; `--uninstall`
+The panel and application menu are set up on the **first installation only**,
+and each extra tray applet is hidden only once. Plugins and applets you add or
+remove later are kept when you update or change the look. Every change to your settings is backed up first; `--uninstall`
 restores them (and switches back to Debian's panel). Use `--no-panel` to keep
 your panel and menu, and `--no-font` to keep your fonts.
 
@@ -172,10 +173,12 @@ All options are optional; they override what is detected.
     --no-gtk4        no GTK 4/libadwaita colour layer
     --no-lightdm     keep the login screen as it is
     --qt             make Qt applications follow the GTK theme
+    --suite NAME     Raspberry Pi OS release to take packages from (default: matched to your Debian)
     --install-only   install packages only; --apply-only: choose and apply a look only
     --check          show available updates; change nothing
     --uninstall      restore previous settings and remove what was installed
 -y, --yes            non-interactive    -n, --dry-run    show, change nothing
+-v, --verbose        print every command
 ```
 
 Examples:
@@ -206,15 +209,17 @@ Examples:
    `CF8A 1AF5 02A2 AA2D 763B AE7E 82B1 2992 7FA3 303E`, pinned in the script). Every
    package is checked against the SHA256 in that signed index.
 3. **Adapts stale dependency names:** if an official package depends on a name
-   Debian has since renamed (`gtk2-engines-clearlookspix` →
-   `libgdk-pixbuf2.0-0`, gone in Debian 13), only its `Depends` field is rewritten
-   to the successor (`libgdk-pixbuf-2.0-0`). APT still checks every dependency.
+   Debian has since renamed (for example, `gtk2-engines-clearlookspix` depends on
+   `libgdk-pixbuf2.0-0`, which Debian 13 no longer has), only its `Depends` field
+   is rewritten to the successor (`libgdk-pixbuf-2.0-0`). APT still checks every
+   dependency.
 4. **Installs with APT**, after refreshing the APT lists so dependencies come from
    the current Debian point release and security updates. The official Debian
    packages the themes need are added, but only if they are missing:
    `gtk2-engines-pixbuf`, `gnome-icon-theme` or `adwaita-icon-theme-legacy`,
-   `fonts-liberation` and `sound-theme-freedesktop`. The installed versions are
-   verified afterwards.
+   `fonts-liberation` and `sound-theme-freedesktop`, and for the LXDE tray
+   `nm-applet` and `blueman` (see above). The installed versions are verified
+   afterwards.
 5. **Adds a small generated package, `pixflat-theme-debian`,** on top of the
    untouched official packages:
    * `PiXflat-Debian` / `PiXtrix-Debian` icon themes. They inherit the official
@@ -247,7 +252,7 @@ packages. The installer does:
 ```
 
 `--check` covers every component (themes, icons and cursors, GTK engines, fonts,
-wallpapers, sounds). For the Debian packages it shows whether `apt upgrade` has
+wallpapers, panel, sounds, tray applets). For the Debian packages it shows whether `apt upgrade` has
 an update. A newer installed version is never downgraded. With
 `install-offline.sh`, the same commands compare against `packages/`; refresh it
 with `--update-packages` on a connected machine.
@@ -258,7 +263,8 @@ The installer follows [DontBreakDebian](https://wiki.debian.org/DontBreakDebian)
 
 * **No FrankenDebian:** no Raspberry Pi (or any other) APT source is added. Only
   individual, verified leaf packages are installed: themes, icons, fonts,
-  wallpapers and GTK 2 theme engines.
+  wallpapers, GTK 2 theme engines and, on Debian 13 with LXDE, Raspberry Pi's
+  panel, its plugins and its Shutdown dialog.
 * **Nothing from Debian is replaced:** the installer refuses any Raspberry Pi
   package whose name also exists in your APT sources. Packages the Raspberry Pi
   archive rebuilds from Debian (such as `gtk2-engines-pixbuf +rpt1`) are never
@@ -308,10 +314,11 @@ It covers **bookworm** and **trixie** on **amd64, arm64, armhf and i386**: all
 Raspberry Pi OS theme packages, plus every official Debian package they need
 that is not part of a standard Debian desktop. The builder works out that list
 from Debian's signed index. It takes the full dependency closure of the bundled
-packages and subtracts the Debian base system (priority required, important and
-standard) and the GTK 3 runtime that every desktop has. That leaves, for example,
-the GTK 2 runtime, which GNOME, KDE and LXQt systems often lack, and the icon
-fallback themes.
+packages and subtracts what a Debian desktop already has: the base system
+(priority required, important and standard), the GTK 3 runtime, the LXDE desktop
+with its audio server, NetworkManager and BlueZ. That leaves, for example, the
+GTK 2 runtime, which GNOME, KDE and LXQt systems often lack, the icon fallback
+themes and the libraries of the panel and tray applets.
 
 When installing, `install-offline.sh` computes the same closure for the chosen
 theme and installs only the members that are missing.
@@ -326,7 +333,7 @@ the official sources, on a machine with internet access:
 
 This checks the Raspberry Pi indexes against the pinned key and the Debian indexes
 against `debian-archive-keyring`. Unchanged packages are reused, so only new
-versions are downloaded. The repository is about 300 MB, most of it wallpapers.
+versions are downloaded. The repository is about 350 MB, most of it wallpapers.
 The largest file, `rpd-wallpaper-trixie-4k`, is just under GitHub's 100 MiB file
 limit.
 
