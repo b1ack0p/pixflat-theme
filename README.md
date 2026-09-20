@@ -68,11 +68,14 @@ Change the look at any time without downloading anything:
 
 Your desktop's appearance settings (e.g. LXAppearance, Xfce Appearance) also list
 the installed themes, but change only the GTK theme and icons. `--apply-only`
-switches the whole look. Those tools list only the adapted icon sets
-(**PiXflat (Debian)**, **PiXtrix (Debian)**, **PiX (Debian)**): the official
-sets stay installed and working, but are hidden from the lists, where picking
-one would lose the Debian logo, the extra cursors and the notification icons
-Debian's applets use.
+switches the whole look, and restarts the panel and desktop so the new icons
+show at once; a set picked in an appearance tool reaches the panel only when it
+restarts (`lxpanelctl-pi restart`, or the next login), because neither panel
+program watches the icon theme. Those tools are meant to list only the adapted
+icon sets (**PiXflat (Debian)**, **PiXtrix (Debian)**, **PiX (Debian)**), which
+add the Debian logo, the extra cursors and the notification icons Debian's
+applets use. Where a tool lists an official set anyway, picking it still shows
+the Debian logo: the menu button icon of that set is replaced for your user.
 
 Use `--only NAME` to install a single theme family instead, and `--4k` for the 4K
 (3840×2160) wallpaper sets.

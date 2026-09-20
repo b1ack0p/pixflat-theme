@@ -2730,6 +2730,26 @@ _logo_path() {
 	return 1
 }
 
+# Put the Debian logo over the Raspberry Pi logo an official icon set carries.
+# A set's own icons beat the ones it inherits, so the adapted set's alias
+# cannot replace it; the user's copy of the set can, because the user's icon
+# directory is searched before the system one. Usage: _logo_shadow SET
+_logo_shadow() {
+	local set=$1 f logo size out
+	logo=/usr/share/icons/desktop-base/scalable/emblems/emblem-debian.svg
+	[[ -f $logo ]] || logo=$(_logo_path) || return 0
+	for f in /usr/share/icons/"$set"/*/places/start-here.* \
+		/usr/share/icons/"$set"/*/places/distributor-logo.*; do
+		[[ -f $f ]] || continue
+		size=${f#"/usr/share/icons/$set/"}; size=${size%%/*}
+		out=$HOME/.local/share/icons/$set/$size/places/${f##*/}
+		out=${out%.*}.${logo##*.}
+		_track_file "$out"
+		mkdir -p "${out%/*}"
+		ln -sfn "$logo" "$out"
+	done
+}
+
 # Print a large Debian logo for the login screen's default user picture.
 _greeter_logo() {
 	local f
@@ -2768,6 +2788,7 @@ _hide_official_icons() {
 			{ print }
 			END { if (!found) print "Inherits=" ENVIRON["I"] "gnome,Adwaita,hicolor" }' "/usr/share/icons/$b/index.theme"
 		  printf 'Hidden=true\n'; } | _write "$f"
+		_logo_shadow "$b"
 	done
 }
 
