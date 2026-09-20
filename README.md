@@ -69,10 +69,11 @@ Change the look at any time without downloading anything:
 Your desktop's appearance settings (e.g. LXAppearance, Xfce Appearance) also list
 the installed themes, but change only the GTK theme and icons. `--apply-only`
 switches the whole look, and restarts the panel and desktop so the new icons
-show at once; a set picked in an appearance tool reaches the panel only when it
-restarts (`lxpanelctl-pi restart`, or the next login), because neither panel
-program watches the icon theme. Those tools are meant to list only the adapted
-icon sets (**PiXflat (Debian)**, **PiXtrix (Debian)**, **PiX (Debian)**), which
+show at once. Neither panel program follows an icon theme change by itself, so
+the LXDE entry for *Customize Look and Feel* is pointed at a wrapper that
+reloads the panel whenever you pick another icon set in it; the panel then
+follows at once instead of at the next login. Those tools are meant to list
+only the adapted icon sets (**PiXflat (Debian)**, **PiXtrix (Debian)**, **PiX (Debian)**), which
 add the Debian logo, the extra cursors and the notification icons Debian's
 applets use. Where a tool lists an official set anyway, picking it still shows
 the Debian logo: the menu button icon of that set is replaced for your user.
@@ -116,7 +117,7 @@ replaced: the file manager is repacked to run beside Debian's.
 |------|----------------------------------|
 | Fonts | UI font at 12 pt (PibotoLt, or Nunito Sans Light), window titles and menus at 12 pt, Monospace as Liberation Mono |
 | Rendering and sizes | antialiasing, full hinting, RGB subpixel order; cursor 24 px; toolbar icons 24 px with text beside; no icons in menus and buttons |
-| Windows (Openbox, labwc) | theme, title bar with title, minimise, maximise and close (no window menu), round corners and invisible resize handles (Openbox), one desktop, window placement; labwc also drop shadows, window snapping and the window switcher layout |
+| Windows (Openbox, labwc) | theme, title bar with title, minimise, maximise and close (no window menu), round corners and invisible resize handles (Openbox), one desktop, window placement; labwc also drop shadows, window snapping and the window switcher layout. The official themes name the hover image of a maximised window's middle button `max_hover_toggled.xbm`, while Openbox loads `max_toggled_hover.xbm`, so that button alone stayed small on hover; the name Openbox reads is added in your theme directory, as a link to the official image |
 | Scaling | Raspberry Pi OS sets no DPI or scale factor, so neither does the installer: your display scaling is kept |
 | Panel (LXDE, Debian 13) | **Raspberry Pi's own panel** (`lxpanel-pi`) with its plugins: menu (Debian logo), launchers for web browser, file manager and terminal, taskbar, tray, eject, Bluetooth, volume, clock, battery (laptops) and magnifier, in the Raspberry Pi OS order and geometry (top, 36 px, 36 px icons, theme colours); Raspberry Pi's Run and Shutdown dialogs (`gui-runcmd`, `pishutdown`: log out, reboot, shut down) at the end of the menu; the network icon (`nm-applet`) in the network plugin's place, between Bluetooth and volume; only the updater and power plugins are left out (they need Raspberry Pi system tools or hardware), and the network plugin (it needs a Raspberry Pi rebuild of a Debian library); the Raspberry Pi OS keys: Super or Ctrl+Esc for the menu, Alt+F2 to run, Ctrl+Alt+Del for Shutdown, Ctrl+Alt+B for Bluetooth, Ctrl+Alt+M for the magnifier, the volume keys. The menu is reloaded whenever packages add or remove applications (Raspberry Pi's panel reads it only when it starts). |
 | Panel (LXDE, Debian 11 and 12) | Debian's panel with the same layout and geometry: menu (Debian logo), launchers, taskbar, tray, volume, clock (`HH:MM`), battery (laptops) |

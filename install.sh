@@ -1503,6 +1503,35 @@ build_local_pkg() {
 		done
 	fi
 
+	# Neither panel program follows an icon theme change, so icons picked in the
+	# appearance tool would stay as they are until the next login. This wrapper
+	# runs the tool and reloads the panel whenever the icon theme changes; the
+	# user's menu entry runs it (see _appearance_entry).
+	mkdir -p "$stage/usr/share/$APP_PKG"
+	cat >"$stage/usr/share/$APP_PKG/appearance" <<'EOF'
+#!/bin/sh
+# Run the appearance tool, reloading the panel on every icon theme change.
+icon_theme() {
+	sed -n 's/^sNet\/IconThemeName=//p' "$HOME"/.config/lxsession/*/desktop.conf 2>/dev/null
+	sed -n 's/^gtk-icon-theme-name[[:space:]]*=[[:space:]]*//p' "$HOME/.config/gtk-3.0/settings.ini" 2>/dev/null
+}
+reload_panel() {
+	if pgrep -x lxpanel-pi >/dev/null 2>&1; then lxpanelctl-pi restart
+	elif pgrep -x lxpanel >/dev/null 2>&1; then lxpanelctl restart
+	fi
+}
+lxappearance "$@" &
+tool=$!
+was=$(icon_theme)
+while kill -0 "$tool" 2>/dev/null; do
+	sleep 1
+	now=$(icon_theme)
+	if [ "$now" != "$was" ]; then was=$now; reload_panel; fi
+done
+wait "$tool"
+EOF
+	chmod 0755 "$stage/usr/share/$APP_PKG/appearance"
+
 	ver="${APP_VERSION}+$(date -u +%Y%m%d%H%M%S)"
 	cat >"$stage/DEBIAN/control" <<EOF
 Package: $APP_PKG
@@ -2325,6 +2354,30 @@ _xml_fonts() {
 	done
 }
 
+# Openbox reads the hover image of a toggled title bar button as
+# "<button>_toggled_hover.xbm", while the official themes name it
+# "<button>_hover_toggled.xbm", so the middle button of a maximised window
+# keeps its small image on hover while the others grow. Give the theme the
+# names Openbox reads, in the user's theme directory, which it looks in first.
+# Every file is a link to the official one, so theme updates still apply.
+# Usage: _openbox_buttons THEME
+_openbox_buttons() {
+	local src=/usr/share/themes/$1/openbox-3 dir=$HOME/.themes/$1/openbox-3 f n
+	[[ -f $src/themerc ]] && compgen -G "$src/*_hover_toggled*.xbm" >/dev/null || return 0
+	mkdir -p "$dir"
+	for f in "$src"/*; do
+		[[ -f $f ]] || continue
+		n=${f##*/}
+		_track_file "$dir/$n"
+		ln -sfn "$f" "$dir/$n"
+		if [[ $n == *_hover_toggled* ]]; then
+			n=${n/_hover_toggled/_toggled_hover}
+			_track_file "$dir/$n"
+			ln -sfn "$f" "$dir/$n"
+		fi
+	done
+}
+
 # Apply the Raspberry Pi OS Openbox settings (lxde-pi-rc.xml / rpd-rc.xml):
 # the <theme> section with round corners and invisible handles, and, unless
 # THEME-ONLY is set, one desktop and the focus and placement settings.
@@ -2333,6 +2386,7 @@ _openbox_rc() {
 	local file=$1 theme_only=${2:-0} fonts
 	if (( O_DRY_RUN )); then log "   [dry-run] $file: Raspberry Pi OS Openbox settings, theme $T_GTK"; return 0; fi
 	_track_file "$file"
+	_openbox_buttons "$T_GTK"
 	fonts=$(_xml_fonts "$file" ActiveWindow InactiveWindow MenuHeader MenuItem ActiveOnScreenDisplay InactiveOnScreenDisplay)
 	_xml_block "$file" theme "$(printf '  <theme>\n    <name>%s</name>\n    <titleLayout>LIMC</titleLayout>\n    <keepBorder>yes</keepBorder>\n    <roundCorners>yes</roundCorners>\n    <invisibleHandles>yes</invisibleHandles>\n    <animateIconify>yes</animateIconify>\n%s\n  </theme>' "$T_GTK" "$fonts")"
 	(( theme_only )) && return 0
@@ -2347,6 +2401,7 @@ _labwc_rc() {
 	local file=$1 fonts
 	if (( O_DRY_RUN )); then log "   [dry-run] $file: Raspberry Pi OS labwc settings, theme $T_GTK"; return 0; fi
 	_track_file "$file"
+	_openbox_buttons "$T_GTK"
 	fonts=$(_xml_fonts "$file" ActiveWindow InactiveWindow OnScreenDisplay MenuItem)
 	_xml_block "$file" theme "$(printf '  <theme>\n    <name>%s</name>\n    <cornerRadius>0</cornerRadius>\n    <keepBorder>yes</keepBorder>\n%s\n    <dropShadows>yes</dropShadows>\n    <titlebar>\n      <layout>:iconify,max,close</layout>\n    </titlebar>\n  </theme>' "$T_GTK" "$fonts")"
 	# Window snapping and the window switcher, as in Raspberry Pi OS
@@ -2653,6 +2708,31 @@ _pi_fm_entries() {
 		sed -E 's/^(Exec|TryExec)=pcmanfm/\1=pcmanfm-pi/' "$f" | _write "$d/${f##*/}"
 	fi
 	_ini_set "$HOME/.config/mimeapps.list" 'Default Applications' inode/directory pcmanfm-pi.desktop
+}
+
+# Open "Customize Look and Feel" through the wrapper that reloads the panel
+# when the icon theme changes, as the panel does not follow such a change
+# itself. The user's own menu entry; the Debian package is left alone.
+_appearance_entry() {
+	local sys=/usr/share/applications/lxappearance.desktop w=/usr/share/$APP_PKG/appearance
+	local f=$HOME/.local/share/applications/lxappearance.desktop
+	[[ -f $sys && -x $w && ! -e $f ]] || return 0
+	if (( O_DRY_RUN )); then log "   [dry-run] $f: reload the panel after an icon theme change"; return 0; fi
+	_once lxde-appearance || return 0
+	_track_file "$f"
+	sed -E "s|^Exec=.*|Exec=$w|; s|^TryExec=.*|TryExec=$w|" "$sys" | _write "$f"
+}
+
+# Point the panel's file manager launcher at Raspberry Pi's file manager, also
+# in a panel this script no longer writes. The panel resolves a launcher
+# through the application menu, so a button left on Debian's entry, which is
+# hidden from the menu above, would lose its icon and name.
+# Usage: _fm_launcher_id PANEL-FILE
+_fm_launcher_id() {
+	[[ -f $1 ]] && grep -q '^[[:space:]]*id=pcmanfm\.desktop[[:space:]]*$' "$1" || return 0
+	if (( O_DRY_RUN )); then log "   [dry-run] $1: file manager launcher -> pcmanfm-pi.desktop"; return 0; fi
+	_track_file "$1"
+	sed -i 's/^\([[:space:]]*\)id=pcmanfm\.desktop[[:space:]]*$/\1id=pcmanfm-pi.desktop/' "$1"
 }
 
 # Write the Raspberry Pi OS application menu for LXDE: its category order,
@@ -3040,13 +3120,14 @@ apply_de_lxde() {
 	if (( O_PANEL )); then _help_menu_entry; fi
 	if (( O_PANEL && O_PI_PANEL )) && [[ -f $rc ]]; then _pi_panel_keys "$rc"; fi
 	if (( O_PANEL && O_PI_PANEL )); then _pi_panel_css; ok "Raspberry Pi panel style for $T_GTK applied (tray icons, buttons)"; fi
-	if (( O_PANEL )); then _hide_extra_applets; fi
+	if (( O_PANEL )); then _hide_extra_applets; _appearance_entry; fi
 	# Raspberry Pi's file manager draws the desktop and opens the folders
 	local fm=pcmanfm
 	if (( O_PI_FM )); then
 		fm=pcmanfm-pi
 		_lxsession_desktop "$sess" "$fm"
 		_pi_fm_entries
+		_fm_launcher_id "$panel"
 		ok "Raspberry Pi file manager set up (desktop, folders and Desktop Preferences)"
 	fi
 	if [[ -n ${DISPLAY:-} ]]; then
