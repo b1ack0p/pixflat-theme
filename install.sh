@@ -2858,20 +2858,23 @@ apply_de_lxde() {
 		if [[ -n $T_FONT ]]; then _ini_set "$i" '*' desktop_font "$T_FONT"; fi
 		if [[ -n $A_WALL ]]; then _ini_set "$i" '*' wallpaper_mode crop wallpaper_common 1 wallpaper "$A_WALL"; fi
 	done
-	# File manager (raspberrypi-ui-mods pcmanfm.conf) and icon sizes (libfm.conf)
+	# File manager (pcmanfm-pi's pcmanfm.conf) and icon sizes (libfm.conf, where
+	# Debian's file manager keeps what Raspberry Pi's fork holds in its own file)
 	f=$HOME/.config/pcmanfm/$sess/pcmanfm.conf
 	_seed "$f" "/etc/xdg/pcmanfm/$sess/pcmanfm.conf" /etc/xdg/pcmanfm/LXDE/pcmanfm.conf /etc/xdg/pcmanfm/default/pcmanfm.conf || true
 	# Defaults for monitors without their own desktop-items file
 	_ini_set "$f" desktop desktop_bg "$T_DESK_BG" desktop_fg "$T_DESK_FG" desktop_shadow "$T_DESK_SHADOW" show_wm_menu 0
 	if [[ -n $A_WALL ]]; then _ini_set "$f" desktop wallpaper_mode crop wallpaper "$A_WALL"; fi
-	_ini_set "$f" ui always_show_tabs 0 max_tab_chars 32 win_width 943 win_height 653 splitter_pos 288 \
+	_ini_set "$f" ui always_show_tabs 0 max_tab_chars 32 win_width 640 win_height 480 splitter_pos 150 \
 		side_pane_mode dirtree view_mode icon show_hidden 0 sort "name;ascending;" columns "name;size;mtime;" \
 		toolbar "newtab;navigation;home;" show_statusbar 1 pathbar_mode_buttons 0
-	# Removable media, as Raspberry Pi OS mounts them
-	_ini_set "$f" volume mount_on_startup 1 mount_removable 1 autorun 1
+	# Raspberry Pi OS leaves removable media to the panel's eject plugin
+	_ini_set "$f" volume mount_on_startup 0 mount_removable 0 autorun 0
+	_ini_set "$f" config bm_open_method 0
 	f=$HOME/.config/libfm/libfm.conf
 	_seed "$f" /etc/xdg/libfm/libfm.conf || true
-	_ini_set "$f" config cutdown_menus 1 real_expanders 1
+	_ini_set "$f" config cutdown_menus 1 real_expanders 1 single_click 0 use_trash 1 confirm_del 1 \
+		thumbnail_local 1 thumbnail_max 2048
 	_ini_set "$f" ui big_icon_size 48 small_icon_size 24 thumbnail_size 80 pane_icon_size 24 show_thumbnail 1
 	_ini_set "$f" places places_home 1 places_desktop 0 places_root 1 places_computer 0 places_trash 0 \
 		places_applications 0 places_network 0 places_unmounted 1 places_volmounts 1
