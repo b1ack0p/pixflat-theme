@@ -697,7 +697,8 @@ verify_inrelease() {
 	if [[ $aid == rpi ]]; then keyring=$KEYRING; else keyring=$DEBIAN_KEYRING; fi
 	rm -f -- "$out"
 	status=$(gpgv --status-fd 1 --keyring "$keyring" --output "$out" "$in" 2>/dev/null) || true
-	if grep -qE '^\[GNUPG:\] (BADSIG|EXPSIG|REVKEYSIG)' <<<"$status" || ! grep -q '^\[GNUPG:\] VALIDSIG' <<<"$status"; then
+	if grep -qE '^\[GNUPG:\] (BADSIG|EXPSIG|EXPKEYSIG|REVKEYSIG|ERRSIG)' <<<"$status" \
+		|| ! grep -q '^\[GNUPG:\] VALIDSIG' <<<"$status"; then
 		die "signature verification failed for $in"
 	fi
 	if [[ $aid == rpi ]]; then
@@ -705,6 +706,18 @@ verify_inrelease() {
 		grep -qxi "$RPI_KEY_FPR" <<<"$fpr" || die "$in is not signed by the Raspberry Pi archive key"
 	fi
 	[[ -s $out ]] || die "no signed content in $in"
+}
+
+# Succeed if a verified Release file is the one for this release and has not
+# expired. Usage: _release_ok FILE SUITE
+_release_ok() {
+	local codename until t
+	codename=$(sed -n 's/^Codename:[[:space:]]*//p' "$1" | head -n1)
+	[[ -z $codename || $codename == "$2" ]] || return 1
+	until=$(sed -n 's/^Valid-Until:[[:space:]]*//p' "$1" | head -n1)
+	[[ -n $until ]] || return 0
+	t=$(date -u -d "$until" +%s 2>/dev/null) || return 0
+	(( t > $(date -u +%s) ))
 }
 
 # Load and verify the package index of an archive, release and architecture.
@@ -725,6 +738,7 @@ index_load() {
 	if [[ ! -f $d/Release ]]; then
 		if ! fetch "$base/dists/$suite/InRelease" "$d/InRelease"; then IDX_FAILED[$key]=1; return 1; fi
 		verify_inrelease "$aid" "$d/InRelease" "$d/Release"
+		_release_ok "$d/Release" "$suite" || die "the signed index at $base/dists/$suite is not a current $suite index"
 	fi
 	for c in xz gz; do
 		[[ $c == xz ]] && ! command -v xz >/dev/null && continue
@@ -859,7 +873,7 @@ resolve_pkg() {
 		while IFS= read -r line; do
 			IFS=$'\t' read -r v a f sha z d <<<"$line"
 			[[ $x == "$H_SUITE/$H_ARCH" || $a == all ]] \
-				|| { [[ $a == "$H_ARCH" && " ${DATA_PKGS[*]} " == *" $pkg "* ]]; } || break
+				|| { [[ $a == "$H_ARCH" && " ${DATA_PKGS[*]} " == *" $pkg "* ]]; } || continue
 			if [[ $aid != local ]] && ! _deps_satisfiable "$d"; then
 				[[ -n $skipped ]] || skipped=$v
 				continue
@@ -1003,35 +1017,39 @@ _dep_ok() {
 # Rewrite dependency names that Debian has since renamed (see DEP_RENAMES).
 # Only the Depends field changes. Prints the path of the package to install.
 compat_fix() {
-	local deb=$1 deps names n c repl changed=0 re dir out
-	deps=$(dpkg-deb -f "$deb" Depends)
-	[[ -n $deps ]] || { printf '%s\n' "$deb"; return 0; }
-	names=$(_depnames <<<"$deps")
-	for n in $names; do
-		_dep_ok "$n" && continue
-		repl=""
-		for c in ${DEP_RENAMES[$n]:-}; do
-			if _dep_ok "$c"; then repl=$c; break; fi
+	local deb=$1 deps names n c repl changed=0 re dir out field stamp
+	local -A value=()
+	for field in Depends Pre-Depends; do
+		deps=$(dpkg-deb -f "$deb" "$field")
+		[[ -n $deps ]] || continue
+		names=$(_depnames <<<"$deps")
+		for n in $names; do
+			_dep_ok "$n" && continue
+			repl=""
+			for c in ${DEP_RENAMES[$n]:-}; do
+				if _dep_ok "$c"; then repl=$c; break; fi
+			done
+			[[ -n $repl ]] || die "$(basename "$deb") depends on '$n', which is not available for $H_SUITE/$H_ARCH"
+			re=${n//./\\.}
+			re=${re//+/\\+}
+			deps=$(sed -E "s/(^|[ ,|])${re}([ ,(|:]|\$)/\\1${repl}\\2/g" <<<"$deps")
+			info "Compatibility: $(dpkg-deb -f "$deb" Package) $field $n -> $repl"
+			changed=1
 		done
-		[[ -n $repl ]] || die "$(basename "$deb") depends on '$n', which is not available for $H_SUITE/$H_ARCH"
-		re=${n//./\\.}
-		re=${re//+/\\+}
-		deps=$(sed -E "s/(^|[ ,|])${re}([ ,(|:]|\$)/\\1${repl}\\2/g" <<<"$deps")
-		info "Compatibility: $(dpkg-deb -f "$deb" Package) depends on $n -> $repl"
-		changed=1
+		value[$field]=$deps
 	done
 	if (( ! changed )); then printf '%s\n' "$deb"; return 0; fi
 	dir="$WORKDIR/repack/$(basename "$deb" .deb)"
-	out="$WORKDIR/debs/$(basename "$deb" .deb)+debcompat.deb"
+	out="$WORKDIR/debs/$(basename "$deb" .deb)+debcompat-$H_SUITE.deb"
 	rm -rf -- "$dir"; mkdir -p "$(dirname "$dir")" "$WORKDIR/debs"
 	dpkg-deb -R "$deb" "$dir"
 	# Keep the original timestamps, so the same input gives an identical file.
-	local stamp
 	stamp=$(stat -c %Y "$dir/DEBIAN/control")
-	DEPS=$deps awk '/^Depends:/ { print "Depends: " ENVIRON["DEPS"]; folded = 1; next }
+	DEPS=${value[Depends]:-} PREDEPS=${value[Pre-Depends]:-} awk '
+		/^Depends:/ { if (ENVIRON["DEPS"] != "") print "Depends: " ENVIRON["DEPS"]; folded = 1; next }
+		/^Pre-Depends:/ { if (ENVIRON["PREDEPS"] != "") print "Pre-Depends: " ENVIRON["PREDEPS"]; folded = 1; next }
 		folded && /^[ \t]/ { next }                      # continuation lines of the old field
-		{ folded = 0; print }' \
-		"$dir/DEBIAN/control" >"$dir/DEBIAN/control.new"
+		{ folded = 0; print }' "$dir/DEBIAN/control" >"$dir/DEBIAN/control.new"
 	mv -- "$dir/DEBIAN/control.new" "$dir/DEBIAN/control"
 	touch -d "@$stamp" "$dir/DEBIAN/control" "$dir/DEBIAN"
 	SOURCE_DATE_EPOCH=$stamp dpkg-deb --root-owner-group -b "$dir" "$out" >/dev/null
@@ -1059,6 +1077,7 @@ fm_coinstall() {
 	for n in usr/bin/pcmanfm usr/share/applications/pcmanfm.desktop usr/share/man/man1/pcmanfm.1.gz; do
 		[[ -f $dir/$n ]] || die "$(basename "$deb") does not contain /$n"
 	done
+	[[ -d $dir$from ]] || die "$(basename "$deb") does not contain $from"
 	grep -qF "$from" "$dir/usr/bin/pcmanfm" || die "$(basename "$deb") does not hold the path $from"
 	FROM=$from TO=$to perl -0777 -pe 'BEGIN { binmode STDIN; binmode STDOUT }
 		s/\Q$ENV{FROM}\E/$ENV{TO}/g' <"$dir/usr/bin/pcmanfm" >"$dir/usr/bin/pcmanfm-pi"
@@ -1683,12 +1702,7 @@ resolve_all() {
 	done
 	[[ " ${FETCH_PKGS[*]} " == *-theme\ * ]] || die "no theme packages are available for $H_SUITE/$H_ARCH"
 
-	# A Raspberry Pi package must never replace a package from the APT sources.
-	for p in "${FETCH_PKGS[@]}"; do
-		if [[ -n $(apt-cache madison "$p" 2>/dev/null) ]]; then
-			die "refusing to install $p from Raspberry Pi OS: your APT sources provide a package with that name"
-		fi
-	done
+	_refuse_debian_names "${FETCH_PKGS[@]}"
 
 	# Debian helpers: the GTK 2 pixmap engine, the sound theme, the monospace
 	# font, the icon cache tool, the icon themes the Raspberry Pi sets inherit
@@ -1736,6 +1750,17 @@ resolve_all() {
 		done
 	fi
 	for p in "${FETCH_PKGS[@]}" "${APT_PKGS[@]}"; do IN_SET[$p]=1; done
+}
+
+# A Raspberry Pi package must never replace a package from the APT sources.
+# Usage: _refuse_debian_names PACKAGE...
+_refuse_debian_names() {
+	local p
+	for p; do
+		if [[ -n $(apt-cache madison "$p" 2>/dev/null) ]]; then
+			die "refusing to install $p from Raspberry Pi OS: your APT sources provide a package with that name"
+		fi
+	done
 }
 
 # Refresh the APT lists, so dependencies come from the current Debian point
@@ -1790,20 +1815,30 @@ _prime_apt_cache() {
 # APT marks the dependencies it installs itself. Everything else, such as the
 # panel plugins, fallback icons, fonts and sounds, which nothing depends on,
 # stays manual, so 'apt autoremove' never removes it.
+# Print the packages this script installs for their own sake: the themes and
+# the Debian helpers. Everything else it installs is a dependency.
+_wanted_pkgs() {
+	{ _bundle_rpi_pkgs "$H_SUITE"; _bundle_deb_pkgs "$H_SUITE"
+	  printf '%s\n' gnome-icon-theme adwaita-icon-theme-legacy fonts-liberation fonts-liberation2 \
+		network-manager-gnome network-manager-applet blueman; } | sort -u
+}
+
 _record_installed() {
-	local p newly=() autos=()
+	local p newly=() autos=() wanted
+	wanted=$(_wanted_pkgs)
 	for p; do
 		(( O_DRY_RUN )) || [[ -n $(_installed_version "$p") ]] || continue
 		newly+=("$p")
+		if grep -qxF "$p" <<<"$wanted"; then continue; fi   # kept: never marked automatic
 		case $p in gtk2-engines-*|libgtk2.0-*|libgdk-pixbuf*) autos+=("$p") ;;
 			*) if [[ " ${DEP_PKGS[*]} " == *" $p "* ]]; then autos+=("$p"); fi ;;
 		esac
 	done
+	(( O_DRY_RUN )) && return 0
 	_fix_auto_marks
 	(( ${#newly[@]} )) || return 0
 	if (( ${#autos[@]} )); then as_root apt-mark auto "${autos[@]}" >/dev/null; fi
 	as_root mkdir -p "$APP_SYS_STATE"
-	(( O_DRY_RUN )) && return 0
 	{ cat "$APP_SYS_STATE/installed-packages" 2>/dev/null || true; printf '%s\n' "${newly[@]}"; } \
 		| sort -u | as_root tee "$APP_SYS_STATE/installed-packages.new" >/dev/null
 	as_root mv -f "$APP_SYS_STATE/installed-packages.new" "$APP_SYS_STATE/installed-packages"
@@ -1816,7 +1851,7 @@ _fix_auto_marks() {
 	local -a fix=()
 	[[ -f $APP_SYS_STATE/installed-packages ]] || return 0
 	mapfile -t fix < <(apt-mark showauto 2>/dev/null \
-		| grep -xE 'lpplug-.*|pplug-.*|gnome-icon-theme|adwaita-icon-theme-legacy|fonts-liberation2?|sound-theme-freedesktop' \
+		| grep -xF -f <(_wanted_pkgs) \
 		| grep -xF -f "$APP_SYS_STATE/installed-packages" || true)
 	if (( ${#fix[@]} )); then as_root apt-mark manual "${fix[@]}" >/dev/null; fi
 }
@@ -1860,8 +1895,10 @@ _check_origins() {
 	[[ -n $H_ID && $H_ID != debian ]] && own=${H_ID^}
 	while IFS= read -r line; do
 		pkg=$(awk '{ print $2 }' <<<"$line")
+		# the archive name, up to the release it belongs to: "Debian:13/stable"
 		origins=$(sed -E 's/^Inst [^ ]+ (\[[^]]*\] )?\([^ ]+ ([^[]*)\[.*/\2/' <<<"$line")
-		if [[ $origins != *local-deb* && $origins != *Debian* && $origins != *"$own"* ]]; then
+		origins=${origins%%:*}; origins=${origins%% }
+		if [[ $origins != local-deb && $origins != Debian && $origins != "$own" ]]; then
 			die "refusing to install $pkg from '${origins% }': Debian packages must come from Debian"
 		fi
 	done < <(grep '^Inst ' <<<"$1")
@@ -1905,6 +1942,8 @@ install_all() {
 	fi
 
 	step "Installing packages"
+	local had=""
+	(( O_DRY_RUN )) || had=$(_installed_names)
 	if (( ${#files[@]} + ${#APT_PKGS[@]} )); then
 		if (( ! O_DRY_RUN )); then
 			if ! sim=$(LC_ALL=C apt-get install --simulate "${opts[@]}" "${files[@]}" "${APT_PKGS[@]}" 2>&1); then
@@ -1918,7 +1957,17 @@ install_all() {
 	fi
 	if (( O_DRY_RUN )); then log "   [dry-run] install the packages above"; else _verify_installed; fi
 
-	_record_installed "${before[@]}"
+	if (( O_DRY_RUN )); then
+		_record_installed "${before[@]}"
+	else
+		mapfile -t before < <(comm -13 <(printf '%s\n' "$had") <(_installed_names))
+		_record_installed "${before[@]}"
+	fi
+}
+
+# Print the names of all installed packages, sorted.
+_installed_names() {
+	dpkg-query -W -f='${db:Status-Abbrev} ${Package}\n' 2>/dev/null | awk '$1 ~ /^.i/ { print $2 }' | LC_ALL=C sort
 }
 
 # Build and install pixflat-theme-debian for the installed themes and the
@@ -1962,8 +2011,8 @@ install_greeter_conf() {
 	if (( O_DRY_RUN )); then log "   [dry-run] $conf: Debian logo, wallpaper, $T_GTK, $T_FONT"; return 0; fi
 	as_root mkdir -p "$APP_SYS_STATE"
 	if [[ ! -f $conf ]]; then
-		as_root touch "$APP_SYS_STATE/pi-greeter.conf.new"
-	elif [[ ! -f $APP_SYS_STATE/pi-greeter.conf.orig ]]; then
+		as_root touch "$APP_SYS_STATE/pi-greeter.conf.new"   # there was none: remove it again on uninstall
+	elif [[ ! -f $APP_SYS_STATE/pi-greeter.conf.orig && ! -f $APP_SYS_STATE/pi-greeter.conf.new ]]; then
 		as_root cp -a -- "$conf" "$APP_SYS_STATE/pi-greeter.conf.orig"
 	fi
 	{
@@ -2235,7 +2284,9 @@ _track_file() {
 	grep -qxF "file:$rel" "$A_STATE/keys" && return 0
 	if [[ -e $path || -L $path ]]; then
 		mkdir -p "$(dirname "$A_STATE/files/$rel")"
-		cp -a -- "$path" "$A_STATE/files/$rel"
+		# A symlinked file is saved by its content: writing and restoring both
+		# go through the link, so the file it points at keeps its own content
+		cp -aL -- "$path" "$A_STATE/files/$rel" 2>/dev/null || cp -a -- "$path" "$A_STATE/files/$rel"
 	else
 		printf '%s\n' "$rel" >>"$A_STATE/created"
 		_missing_dirs "$(dirname "$path")" >>"$A_STATE/created-dirs"
@@ -2747,19 +2798,38 @@ _pi_fm_entries() {
 	# (rpd-common's raspi-ui-overrides): "File Manager", in Accessories
 	if [[ -f /usr/share/applications/pcmanfm-pi.desktop && ! -e $d/pcmanfm-pi.desktop ]] && _once fm:launcher; then
 		_track_file "$d/pcmanfm-pi.desktop"
-		sed -E 's/^Name=.*/Name=File Manager/; s/^Categories=.*/Categories=FileTools;FileManager;Utility;Core;GTK;/' \
-			/usr/share/applications/pcmanfm-pi.desktop | _write "$d/pcmanfm-pi.desktop"
+		{ printf '# %s\n' "$APP_NAME"
+		  sed -E 's/^Name=.*/Name=File Manager/; s/^Categories=.*/Categories=FileTools;FileManager;Utility;Core;GTK;/' \
+			/usr/share/applications/pcmanfm-pi.desktop; } | _write "$d/pcmanfm-pi.desktop"
 	fi
 	if [[ ! -e $d/pcmanfm.desktop ]] && _once fm:menu-entry; then
 		_track_file "$d/pcmanfm.desktop"
-		printf '[Desktop Entry]\nType=Application\nName=PCMan File Manager\nExec=pcmanfm %%U\nNoDisplay=true\n' \
-			| _write "$d/pcmanfm.desktop"
+		printf '# %s\n[Desktop Entry]\nType=Application\nName=PCMan File Manager\nExec=pcmanfm %%U\nNoDisplay=true\n' \
+			"$APP_NAME" | _write "$d/pcmanfm.desktop"
 	fi
 	if [[ -f $f && ! -e $d/${f##*/} ]] && _once fm:desktop-pref; then
 		_track_file "$d/${f##*/}"
-		sed -E 's/^(Exec|TryExec)=pcmanfm/\1=pcmanfm-pi/' "$f" | _write "$d/${f##*/}"
+		{ printf '# %s\n' "$APP_NAME"; sed -E 's/^(Exec|TryExec)=pcmanfm/\1=pcmanfm-pi/' "$f"; } | _write "$d/${f##*/}"
 	fi
 	_ini_set "$HOME/.config/mimeapps.list" 'Default Applications' inode/directory pcmanfm-pi.desktop
+}
+
+# Hand the desktop and the folders back to Debian's file manager, for a later
+# run with --no-file-manager. Only the entries this script generated are
+# removed; a file the user wrote is left alone.
+_pi_fm_entries_revert() {
+	local d=$HOME/.local/share/applications f
+	if (( O_DRY_RUN )); then log "   [dry-run] default file manager: pcmanfm"; return 0; fi
+	for f in pcmanfm.desktop pcmanfm-pi.desktop pcmanfm-desktop-pref.desktop; do
+		if [[ -f $d/$f ]] && head -n1 "$d/$f" | grep -qxF "# $APP_NAME"; then
+			_track_file "$d/$f"
+			rm -f -- "$d/$f"
+		fi
+	done
+	f=$(sed -n 's/^inode\/directory=//p' "$HOME/.config/mimeapps.list" 2>/dev/null || true)
+	if [[ $f == pcmanfm-pi.desktop ]]; then
+		_ini_set "$HOME/.config/mimeapps.list" 'Default Applications' inode/directory pcmanfm.desktop
+	fi
 }
 
 # Open "Customize Look and Feel" through the wrapper that reloads the panel
@@ -2782,11 +2852,13 @@ _appearance_entry() {
 # through the application menu, so a button left on Debian's entry, which is
 # hidden from the menu above, would lose its icon and name.
 # Usage: _fm_launcher_id PANEL-FILE
+# Usage: _fm_launcher_id PANEL-FILE FROM-ID TO-ID
 _fm_launcher_id() {
-	[[ -f $1 ]] && grep -q '^[[:space:]]*id=pcmanfm\.desktop[[:space:]]*$' "$1" || return 0
-	if (( O_DRY_RUN )); then log "   [dry-run] $1: file manager launcher -> pcmanfm-pi.desktop"; return 0; fi
-	_track_file "$1"
-	sed -i 's/^\([[:space:]]*\)id=pcmanfm\.desktop[[:space:]]*$/\1id=pcmanfm-pi.desktop/' "$1"
+	local file=$1 from=${2//./\\.} to=$3
+	[[ -f $file ]] && grep -q "^[[:space:]]*id=${from}[[:space:]]*\$" "$file" || return 0
+	if (( O_DRY_RUN )); then log "   [dry-run] $file: file manager launcher -> $3"; return 0; fi
+	_track_file "$file"
+	sed -i "s/^\\([[:space:]]*\\)id=${from}[[:space:]]*\$/\\1id=${to}/" "$file"
 }
 
 # Write the Raspberry Pi OS application menu for LXDE: its category order,
@@ -3123,17 +3195,18 @@ apply_de_lxde() {
 
 	# Desktop preferences (PCManFM), as in Raspberry Pi OS: the same wallpaper,
 	# colours and font on every monitor; trash and drive icons on the first one.
-	local d=$HOME/.config/pcmanfm/$sess n
+	local d=$HOME/.config/pcmanfm/$sess first
 	local items=("$d/desktop-items-0.conf" "$d/desktop-items-1.conf")
 	for i in "$d"/desktop-items-*.conf; do
 		if [[ -e $i && " ${items[*]} " != *" $i "* ]]; then items+=("$i"); fi
 	done
 	for i in "${items[@]}"; do
-		n=${i##*-}; n=${n%.conf}
+		# the first monitor's file, whether it is numbered or named after an output
+		first=0; [[ ${i##*/} == desktop-items-0.conf ]] && first=1
 		_seed "$i" "/etc/xdg/pcmanfm/$sess/${i##*/}" "/etc/xdg/pcmanfm/LXDE/${i##*/}" || true
 		_ini_set "$i" '*' desktop_bg "$T_DESK_BG" desktop_fg "$T_DESK_FG" desktop_shadow "$T_DESK_SHADOW" \
 			show_wm_menu 0 sort "mtime;ascending;" show_documents 0 \
-			show_trash $(( n == 0 )) show_mounts $(( n == 0 ))
+			show_trash "$first" show_mounts "$first"
 		if [[ -n $T_FONT ]]; then _ini_set "$i" '*' desktop_font "$T_FONT"; fi
 		if [[ -n $A_WALL ]]; then _ini_set "$i" '*' wallpaper_mode crop wallpaper_common 1 wallpaper "$A_WALL"; fi
 	done
@@ -3161,6 +3234,7 @@ apply_de_lxde() {
 				_lxsession_panel "$sess" lxpanel-pi
 			else
 				_lxpanel_write "$panel"
+				_lxsession_panel "$sess" lxpanel
 			fi
 			ok "Panel layout written ($prog: Raspberry Pi OS)"
 			_lxde_menu_write
@@ -3180,16 +3254,18 @@ apply_de_lxde() {
 		_hide_extra_applets
 		_appearance_entry
 	fi
-	# Raspberry Pi's file manager draws the desktop and opens the folders
-	local fm=pcmanfm
-	if (( O_PI_FM )); then
-		fm=pcmanfm-pi
+	# Raspberry Pi's file manager draws the desktop and opens the folders; with
+	# --no-file-manager, Debian's does, also on a system set up by an earlier run
+	local fm=pcmanfm from=pcmanfm.desktop to=pcmanfm-pi.desktop
+	if (( O_PI_FM )); then fm=pcmanfm-pi; else from=pcmanfm-pi.desktop to=pcmanfm.desktop; fi
+	if (( O_PI_FM )) || grep -q '^@\?pcmanfm-pi' "$HOME/.config/lxsession/$sess/autostart" 2>/dev/null; then
 		_lxsession_desktop "$sess" "$fm"
-		_pi_fm_entries
+		if (( O_PI_FM )); then _pi_fm_entries; else _pi_fm_entries_revert; fi
 		# both panel programs, so the launcher is corrected whichever is in use
-		_fm_launcher_id "$HOME/.config/lxpanel/$sess/panels/panel"
-		_fm_launcher_id "$HOME/.config/lxpanel-pi/panels/panel"
-		ok "Raspberry Pi file manager set up (desktop, folders and Desktop Preferences)"
+		_fm_launcher_id "$HOME/.config/lxpanel/$sess/panels/panel" "$from" "$to"
+		_fm_launcher_id "$HOME/.config/lxpanel-pi/panels/panel" "$from" "$to"
+		if (( O_PI_FM )); then ok "Raspberry Pi file manager set up (desktop, folders and Desktop Preferences)"
+		else ok "Debian's file manager set up again (desktop and folders)"; fi
 	fi
 	if [[ -n ${DISPLAY:-} ]]; then
 		if _running openbox; then run openbox --reconfigure || true; fi
@@ -3275,8 +3351,11 @@ apply_de_xfce() {
 		done
 		(( n )) || warn "no Xfce desktop backdrop found; open Desktop settings once and rerun to set the wallpaper"
 	fi
-	local css='/* Full-colour icons on the Xfce panel, like the Raspberry Pi OS panel */
+	local css=''
+	if (( O_PANEL )); then
+		css='/* Full-colour icons on the Xfce panel, like the Raspberry Pi OS panel */
 .xfce4-panel image { -gtk-icon-style: regular; }'
+	fi
 	if (( ! T_DARK )); then
 		css+='
 /* PiXflat-style desktop icon labels */
@@ -3468,7 +3547,7 @@ apply_main() {
 unapply_main() {
 	local st rel
 	st=$(_st)
-	if [[ ! -d $st ]]; then info "No saved settings for $(id -un)"; return 0; fi
+	if [[ ! -d $st || ! -f $st/keys ]]; then info "No saved settings for $(id -un)"; return 0; fi
 	step "Restoring the previous desktop settings of $(id -un)"
 	if [[ -s $st/restore.sh ]]; then
 		if (( O_DRY_RUN )); then sed 's/^/   [dry-run] /' "$st/restore.sh" >&2
@@ -3477,10 +3556,10 @@ unapply_main() {
 	while IFS= read -r rel; do
 		[[ $rel == file:* ]] || continue
 		rel=${rel#file:}
-		if grep -qxF "$rel" "$st/created"; then
-			run rm -f -- "$HOME/$rel"
+		if grep -qxF "$rel" "$st/created" 2>/dev/null; then
+			run rm -f -- "$HOME/$rel" || warn "could not remove $rel"
 		elif [[ -e $st/files/$rel || -L $st/files/$rel ]]; then
-			run cp -a -- "$st/files/$rel" "$HOME/$rel"
+			run cp -a -- "$st/files/$rel" "$HOME/$rel" || warn "could not restore $rel"
 		fi
 	done <"$st/keys"
 	local -a dirs=()
@@ -3520,7 +3599,8 @@ run_user_phase() {
 	[[ -n $S_XAUTH ]] && envv+=(XAUTHORITY="$S_XAUTH")
 	[[ -n $S_XDG_DESKTOP ]] && envv+=(XDG_CURRENT_DESKTOP="$S_XDG_DESKTOP")
 	[[ -n ${LABWC_PID:-} ]] && envv+=(LABWC_PID="$LABWC_PID")
-	if [[ -n ${XDG_STATE_HOME:-} ]] && (( EUID == S_UID )); then envv+=(XDG_STATE_HOME="$XDG_STATE_HOME"); fi
+	if [[ -n ${XDG_STATE_HOME:-} && $EUID -eq $S_UID ]]; then envv+=(XDG_STATE_HOME="$XDG_STATE_HOME")
+	else envv+=(XDG_STATE_HOME=); fi   # never the caller's, when it is another user's desktop
 	local -a cmd=(bash "$f")
 	if [[ -z $S_DBUS ]] && command -v dbus-run-session >/dev/null; then
 		warn "no running desktop session found for $S_USER; settings are written for the next login"
@@ -3565,7 +3645,8 @@ do_check() {
 	done
 
 	step "Debian packages (updated by APT)"
-	for p in $(_bundle_deb_pkgs "$H_SUITE") network-manager-gnome network-manager-applet blueman; do
+	for p in $({ _bundle_deb_pkgs "$H_SUITE"; printf '%s\n' gnome-icon-theme adwaita-icon-theme-legacy \
+		fonts-liberation fonts-liberation2 network-manager-gnome network-manager-applet blueman; } | sort -u); do
 		cur=$(_installed_version "$p")
 		[[ -n $cur ]] || continue
 		cand=$(LC_ALL=C apt-cache policy "$p" 2>/dev/null | awk '/Candidate:/ { print $2 }')
@@ -3618,18 +3699,19 @@ do_uninstall() {
 	[[ -n $(_installed_version "$APP_PKG") ]] && log "  Remove package:              $APP_PKG"
 	(( ${#still[@]} )) && log "  Packages installed by this script: ${still[*]}"
 	ask "Continue" y || die "aborted"
-	if [[ -f $APP_SYS_STATE/pi-greeter.conf.orig ]]; then
-		prepare_root
-		as_root cp -a -- "$APP_SYS_STATE/pi-greeter.conf.orig" /etc/lightdm/pi-greeter.conf
-		ok "Restored the previous /etc/lightdm/pi-greeter.conf"
-	elif [[ -f $APP_SYS_STATE/pi-greeter.conf.new ]]; then
+	if [[ -f $APP_SYS_STATE/pi-greeter.conf.new ]]; then
 		prepare_root
 		as_root rm -f -- /etc/lightdm/pi-greeter.conf
 		ok "Removed the /etc/lightdm/pi-greeter.conf this script wrote"
+	elif [[ -f $APP_SYS_STATE/pi-greeter.conf.orig ]]; then
+		prepare_root
+		as_root cp -a -- "$APP_SYS_STATE/pi-greeter.conf.orig" /etc/lightdm/pi-greeter.conf
+		ok "Restored the previous /etc/lightdm/pi-greeter.conf"
 	fi
 	run_user_phase unapply_main
 	local -a purge=() remove=() keep=()
-	local forget=$(( ${#still[@]} == 0 ))
+	local forget=0
+	if [[ -d $APP_SYS_STATE ]] && (( ${#still[@]} == 0 )); then forget=1; fi
 	[[ -n $(_installed_version "$APP_PKG") ]] && purge+=("$APP_PKG")
 	if (( ${#still[@]} )) && ask "Also remove the packages installed by this script" y; then
 		mapfile -t remove < <(_safe_purge_set "${still[@]}" || true)
@@ -3865,9 +3947,9 @@ main() {
 
 	detect_desktops
 	if (( O_LIGHTDM < 0 )); then O_LIGHTDM=$([[ -x /usr/sbin/lightdm-gtk-greeter ]] && echo 1 || echo 0); fi
+	[[ -z $O_REPO || -n ${REPO_OK:-} ]] || { verify_repo; REPO_OK=1; }
 	if (( O_DO_INSTALL )); then
 		preflight_tools
-		[[ -z $O_REPO ]] || verify_repo
 		pick_suite
 		resolve_all
 		print_plan
