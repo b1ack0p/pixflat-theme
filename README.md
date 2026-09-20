@@ -227,12 +227,19 @@ Examples:
    afterwards.
 5. **Adds a small generated package, `pixflat-theme-debian`,** on top of the
    untouched official packages:
-   * `PiXflat-Debian` / `PiXtrix-Debian` icon themes. They inherit the official
-     icons and add **43 cursor-name aliases** that the official cursor themes lack
-     (`pointer`, `all-scroll`, `nesw-resize`, `grab`, the Qt hash names, …) and the
-     icon names Debian's panel applets use for sound, network and Bluetooth. Each
-     alias is a symlink to an official image, so cursors and notification icons
-     look exactly as in Raspberry Pi OS.
+   * `PiXflat-Debian` / `PiXtrix-Debian` / `PiX-Debian` icon themes. They inherit
+     the official icons and add **43 cursor-name aliases** that the official cursor
+     themes lack (`pointer`, `all-scroll`, `nesw-resize`, `grab`, the Qt hash
+     names, …), the icon names Debian's panel applets use for sound, network and
+     Bluetooth, and the current names for every icon the official sets carry under
+     the old GNOME naming (`gnome-mime-application-pdf` also answers to
+     `application-pdf`), plus the common file types (office documents, plain text,
+     unknown files). Each alias is a symlink to an official image. A set also falls
+     back to the other Raspberry Pi sets before GNOME, and the official sets get
+     the same names and fallbacks through a copy of their `index.theme` in your
+     home, so icons stay Raspberry Pi's whichever set is selected: 204 of the 708
+     standard icon names are served by Raspberry Pi artwork, against 144 to 188
+     with the official sets alone.
    * **Xfwm4 themes** for PiXflat, PiXnoir, PiXtrix, PiXonyx and PiX, generated from
      the colours and button bitmaps of the official Openbox themes.
    * the Raspberry Pi OS login screen style for the LightDM GTK greeter, with the

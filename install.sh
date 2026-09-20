@@ -1236,11 +1236,32 @@ _icon_aliases() {
 	# nm-applet's connecting animation frames and VPN frames
 	for n in 01 02 03; do for i in $(seq -w 1 11); do pairs+=("nm-stage$n-connecting$i:network-idle"); done; done
 	for i in $(seq -w 1 14); do pairs+=("nm-vpn-connecting$i:nm-vpn-active-lock"); done
+	# Generic file names: the official sets carry the old GNOME names
+	# (gnome-mime-application-pdf), today's file managers ask for the current
+	# ones (application-pdf), so each old name also answers to the new one.
+	pairs+=("application-octet-stream:unknown"    "application-x-generic:unknown"
+		"text-plain:text-x-generic"              "application-x-zerosize:empty"
+		"inode-x-empty:empty"                    "inode-directory:folder"
+		"application-x-sharedlib:application-x-executable"
+		"application-x-firmware:unknown"         "application-certificate:unknown"
+		# Office documents, which file managers ask for by their long names
+		"application-vnd.openxmlformats-officedocument.wordprocessingml.document:x-office-document"
+		"application-vnd.openxmlformats-officedocument.spreadsheetml.sheet:x-office-spreadsheet"
+		"application-vnd.openxmlformats-officedocument.presentationml.presentation:x-office-presentation"
+		"application-vnd.ms-word:x-office-document"   "application-msword:x-office-document"
+		"application-vnd.ms-excel:x-office-spreadsheet"
+		"application-vnd.ms-powerpoint:x-office-presentation"
+		"application-vnd.oasis.opendocument.spreadsheet:x-office-spreadsheet"
+		"application-vnd.oasis.opendocument.presentation:x-office-presentation"
+		"application-vnd.oasis.opendocument.graphics:x-office-drawing")
 	while IFS= read -r rel; do
 		f=${rel##*/}; f=${f%.*}
 		have[$f]=1
 		imgs[$f]+="$rel "
 	done < <(cd "$bdir" && find . -mindepth 3 \( -name '*.png' -o -name '*.svg' \) -printf '%P\n')
+	for f in "${!imgs[@]}"; do
+		[[ $f == gnome-mime-* ]] && pairs+=("${f#gnome-mime-}:$f")
+	done
 	for entry in "${pairs[@]}"; do
 		name=${entry%%:*} target=${entry#*:} force=0
 		if [[ $name == '!'* ]]; then name=${name#!} force=1; fi
@@ -2366,7 +2387,8 @@ _pi_panel_write() {
 # Keep only the Raspberry Pi OS set of notification icons in the LXDE panel:
 # hide, for this user, autostarted tray applets that Raspberry Pi OS does not
 # have (clipboard managers) or whose job a Raspberry Pi plugin does (volume;
-# Bluetooth when Raspberry Pi's panel is used). They stay installed; the
+# Bluetooth when Raspberry Pi's panel is used), and a second PolicyKit
+# authentication agent, which the session refuses. They stay installed; the
 # standard "Hidden=true" autostart override is used. Each applet is hidden
 # once, the first time it is seen, so an applet the user enables again later
 # is left alone.
@@ -2374,6 +2396,10 @@ _hide_extra_applets() {
 	local f id
 	local -a pats=(volumeicon pasystray pnmixer diodon clipit parcellite)
 	(( O_PI_PANEL )) && pats+=(blueman)
+	# A second PolicyKit authentication agent makes the session show "an
+	# authentication agent already exists for the given subject"; LXDE's own
+	# (lxpolkit, started by the session) is the one that stays.
+	[[ -x /usr/bin/lxpolkit ]] && pats+=(polkit-gnome-authentication-agent mate-polkit polkit-mate xfce-polkit)
 	for id in "${pats[@]}"; do
 		for f in /etc/xdg/autostart/"$id"*.desktop; do
 			[[ -f $f ]] || continue
@@ -2589,13 +2615,27 @@ _greeter_logo() {
 # out of the lists, where picking one would lose the Debian logo, the extra
 # cursor names and the notification icons Debian's applets use.
 _hide_official_icons() {
-	local b f
+	local b f o inh
 	for b in PiXflat PiXtrix PiX; do
 		[[ -f /usr/share/icons/$b-Debian/index.theme && -f /usr/share/icons/$b/index.theme ]] || continue
 		f=$HOME/.local/share/icons/$b/index.theme
 		if (( O_DRY_RUN )); then log "   [dry-run] $f: hide $b in theme choosers"; continue; fi
 		_track_file "$f"
-		{ grep -v '^Hidden=' "/usr/share/icons/$b/index.theme"; printf 'Hidden=true\n'; } | _write "$f"
+		# The copy also inherits the other Raspberry Pi sets before GNOME, so
+		# even the official set shows Raspberry Pi icons for names it lacks
+		# (nm-applet's network icons, for example) when something selects it.
+		# The adapted set comes first, so the official set answers to the same
+		# names (the Debian logo, the cursor names and the icon names Debian's
+		# applets and file managers use), then the other Raspberry Pi sets.
+		inh="$b-Debian,"
+		for o in PiXtrix PiXflat PiX; do
+			[[ $o != "$b" && -d /usr/share/icons/$o ]] && inh+="$o,"
+		done
+		{ I=$inh awk '/^Hidden=/ { next }
+			/^Inherits[[:space:]]*=/ { sub(/^Inherits[[:space:]]*=[[:space:]]*/, ""); print "Inherits=" ENVIRON["I"] $0; found = 1; next }
+			{ print }
+			END { if (!found) print "Inherits=" ENVIRON["I"] "gnome,Adwaita,hicolor" }' "/usr/share/icons/$b/index.theme"
+		  printf 'Hidden=true\n'; } | _write "$f"
 	done
 }
 
@@ -2819,6 +2859,8 @@ apply_de_lxde() {
 	_ini_set "$f" ui always_show_tabs 0 max_tab_chars 32 win_width 943 win_height 653 splitter_pos 288 \
 		side_pane_mode dirtree view_mode icon show_hidden 0 sort "name;ascending;" columns "name;size;mtime;" \
 		toolbar "newtab;navigation;home;" show_statusbar 1 pathbar_mode_buttons 0
+	# Removable media, as Raspberry Pi OS mounts them
+	_ini_set "$f" volume mount_on_startup 1 mount_removable 1 autorun 1
 	f=$HOME/.config/libfm/libfm.conf
 	_seed "$f" /etc/xdg/libfm/libfm.conf || true
 	_ini_set "$f" config cutdown_menus 1 real_expanders 1
@@ -3468,7 +3510,11 @@ _log_state() {
 	done
 	log "    entries    ${v:-none installed}"
 	v=$(sed -n 's/^gtk-icon-theme-name=//p' "$h/.config/gtk-3.0/settings.ini" 2>/dev/null || true)
-	log "    icons      ${v:-not set}"
+	log "    icons      ${v:-not set} (GTK 3)"
+	v=$(sed -n 's/^sNet\/ThemeName=//p; s/^sNet\/IconThemeName=/icons /p' "$h/.config/lxsession"/*/desktop.conf 2>/dev/null | paste -sd', ' - || true)
+	log "    session    ${v:-no LXDE session settings}"
+	v=$(pgrep -a -u "${S_UID:-$UID}" -f 'polkit.*agent|lxpolkit' 2>/dev/null | sed 's/^[0-9]* //' | paste -sd'; ' - || true)
+	log "    polkit     ${v:-no authentication agent}"
 }
 
 # Entry point: parse options, then check, uninstall, rebuild ./packages, or
