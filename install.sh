@@ -270,8 +270,9 @@ Options:
   -u, --user NAME         User whose desktop is configured (default: the user
                           running the script, or \$SUDO_USER under sudo).
       --wallpaper W       Wallpaper file name in /usr/share/rpd-wallpaper, or a path.
-      --no-wallpaper      Do not install or set the Raspberry Pi wallpapers.
-      --4k                Use the 4K (3840x2160) wallpaper set instead (about 100 MB).
+      --no-wallpaper      Do not install or set the Raspberry Pi wallpapers
+                          (about 72 MB).
+      --4k                Use the 4K (3840x2160) wallpapers instead (about 196 MB).
       --no-font           Do not install or set the Raspberry Pi UI font.
       --no-panel          Keep your panel and application menu (default: the
                           Raspberry Pi OS layout).
@@ -279,7 +280,7 @@ Options:
                           (default: Raspberry Pi's, installed beside it on Debian 13).
       --no-gtk4           Do not add the theme colours for GTK 4/libadwaita applications.
       --no-lightdm        Keep the login screen as it is (default: the Raspberry Pi
-                          OS style, when the LightDM GTK greeter is installed).
+                          OS style, where Debian's LightDM GTK greeter is installed).
       --qt                Make Qt applications follow the GTK theme.
       --suite NAME        Raspberry Pi OS release to take packages from
                           (default: matched to this system; bookworm, trixie, ...).
@@ -303,7 +304,7 @@ EOF
 Examples:
   ./${self}                        install all themes, then choose the look
   ./${self} -y                     no questions: the theme matching this Debian
-  ./${self} -t pixnoir --icons pixtrix   a specific look, without asking
+  ./${self} -y -t pixnoir --icons pixtrix   a specific look, no questions
   ./${self} --apply-only           switch the look later
   ./${self} --check                list available updates
   ./${self} --uninstall            undo everything
@@ -3772,7 +3773,9 @@ cleanup() {
 # wrong.
 _start_log() {
 	local log
+	# The actions that change nothing leave no file behind either
 	(( O_DRY_RUN )) && return 0
+	[[ $O_ACTION == check ]] && return 0
 	printf -v log '%s/%s-%(%Y%m%d-%H%M%S)T.log' "${S_HOME:-$HOME}" "$APP_NAME" -1
 	{ : >>"$log"; } 2>/dev/null || return 0
 	if (( EUID == 0 )) && [[ -n $S_UID ]]; then chown "$S_UID" "$log" 2>/dev/null || true; fi

@@ -26,7 +26,9 @@ cd pixflat-theme
 ```
 
 Without internet access, use `./install-offline.sh` instead. Run either as your
-normal user: it asks for `sudo` only to install packages.
+normal user: it asks for `sudo` to install the packages, to write the login
+screen settings and to record what it installed. Your own settings are written
+without it.
 
 No options are needed. Both scripts detect your Debian release, architecture,
 user and desktop session themselves, install every theme your release supports,
@@ -36,7 +38,7 @@ and ask at the end which look to apply.
 
 | Theme (`-t`) | Look | Font | Wallpaper |
 |--------------|------|------|-----------|
-| `pixflat` | light, Raspberry Pi OS Bookworm (default on Debian 12) | Piboto | fisherman |
+| `pixflat` | light, Raspberry Pi OS Bookworm (default on Debian 11 and 12) | Piboto | fisherman |
 | `pixnoir` | dark, Raspberry Pi OS Bookworm | Piboto | fisherman |
 | `pixtrix` | light, Raspberry Pi OS Trixie (default on Debian 13) | Nunito Sans Light | sunrise |
 | `pixonyx` | dark, Raspberry Pi OS Trixie | Nunito Sans Light | sunrise |
@@ -46,8 +48,8 @@ Every theme is installed on every supported release (about 76 MB, mostly
 wallpapers) and any theme can be combined with any icon set:
 
 ```sh
-./install.sh -t pixnoir --icons pixtrix   # a specific look, without asking
-./install.sh --apply-only                 # switch the look later, downloads nothing
+./install.sh -y -t pixnoir --icons pixtrix   # a specific look, no questions
+./install.sh --apply-only                 # switch the look later, without installing
 ./install.sh --only pixflat               # install one family instead of all
 ```
 
@@ -67,13 +69,13 @@ configuration packages (`raspberrypi-ui-mods` for Bookworm, `rpd-common`,
 | Fonts | the Raspberry Pi OS UI font at 12 pt, Liberation Mono for monospace |
 | Rendering | antialiasing, full hinting, subpixel order; 24 px cursors and toolbar icons; no icons in menus and buttons |
 | Windows | the theme's Openbox and labwc settings: title bar layout, round corners, invisible resize handles, window placement |
-| Panel (LXDE, Debian 13) | **Raspberry Pi's own panel** in its own layout: menu, launchers, taskbar, tray, eject, Bluetooth, volume, clock, battery, magnifier, and its Run and Shutdown dialogs, with the Raspberry Pi OS keyboard shortcuts |
+| Panel (LXDE, Debian 13) | where Debian's LXDE panel is installed: **Raspberry Pi's own panel** in its own layout: menu, launchers, taskbar, tray, eject, Bluetooth, volume, clock, battery, magnifier, and its Run and Shutdown dialogs, with the Raspberry Pi OS keyboard shortcuts |
 | Panel (LXDE, Debian 11 and 12) | Debian's panel, in the same layout and size |
 | Notification icons | the Raspberry Pi OS icons for sound, network and Bluetooth, so Debian's applets look like Raspberry Pi's plugins |
 | Application menu (LXDE) | the Raspberry Pi OS categories and order, with Help, Preferences, Run and Shutdown at the end |
-| File manager | **Raspberry Pi's own file manager** on Debian 13, installed beside Debian's, with the Raspberry Pi OS window, toolbar and side pane settings; on Debian 11 and 12 Debian's file manager gets the same settings |
+| File manager | on Debian 13, where Debian's file manager is installed: **Raspberry Pi's own file manager**, installed beside it, with the Raspberry Pi OS window, toolbar and side pane settings; on Debian 11 and 12 Debian's file manager gets the same settings |
 | Desktop | the wallpaper, desktop colours and font, trash and drive icons |
-| Login screen | **Raspberry Pi's own greeter**, with its layout, background and colours, when LightDM is installed |
+| Login screen | **Raspberry Pi's own greeter**, with its layout, background and colours, where Debian's LightDM GTK greeter is installed |
 | Sounds | event sounds with the freedesktop sound theme |
 
 On other desktops the same GTK theme, icons, cursor, fonts and wallpaper are
@@ -104,9 +106,21 @@ to make them fit Debian:
   maximised window.
 * **Xfwm4 themes** are generated for Xfce, and a **colour layer** for GTK 4 and
   libadwaita applications, which cannot use the theme itself (`--no-gtk4` skips it).
+* Tray applets Raspberry Pi OS does not show — clipboard managers such as
+  Diodon, other volume applets, and a second authentication agent — are hidden
+  once for your user, not removed. Turn one on again in *Desktop Session
+  Settings* and it stays.
+* Only the adapted icon sets are offered in the appearance tools; the official
+  sets stay installed and keep working. On Debian 13, Debian's file manager
+  entry is hidden so the menu shows one *File Manager*, and folders open in
+  Raspberry Pi's.
+* The desktop and panel are restarted at the end of a run, so the new look
+  appears at once; open windows are not affected.
 
-Panel, menu and tray are set up on the **first installation only**, so plugins
-and applets you add or remove later are kept when you update or change the look.
+Panel, menu and tray are set up on the **first installation**, and refreshed by
+later runs only while they are still the layout this installer wrote. As soon as
+you change anything in the panel's own preferences, the panel is yours: plugins
+and applets you add or remove there are kept when you update or change the look.
 
 ## Options
 
@@ -119,8 +133,8 @@ All options are optional; they override what is detected.
 -d, --desktop LIST   other desktops than the detected one: all, none, or e.g. lxde,xfce
 -u, --user NAME      configure another user's desktop (needs sudo)
     --wallpaper W    a file in /usr/share/rpd-wallpaper (e.g. aurora) or a path
-    --no-wallpaper   skip the wallpaper packages (about 27 or 45 MB)
-    --4k             use the 4K wallpaper set instead (about 100 MB)
+    --no-wallpaper   skip the wallpaper packages (about 72 MB)
+    --4k             use the 4K wallpapers instead (about 196 MB)
     --no-font        keep your current fonts
     --no-panel       keep your panel and application menu
     --no-file-manager  keep Debian's file manager as the only one
@@ -131,13 +145,16 @@ All options are optional; they override what is detected.
     --install-only   install packages only; --apply-only: choose and apply a look only
     --check          show available updates; change nothing
     --uninstall      restore previous settings and remove what was installed
+                     (--remove does the same)
 -y, --yes            non-interactive    -n, --dry-run    show, change nothing
 -v, --verbose        print every command
+-h, --help           the full list       -V, --version    the version
 ```
 
-Each run writes a log, `~/pixflat-theme-DATE-TIME.log`, with every step and the
-state of the desktop afterwards. It is the first place to look when something
-is not as expected.
+Every run that changes something writes a log, `~/pixflat-theme-DATE-TIME.log`,
+with each step and the state of the desktop afterwards. It is the first place to
+look when something is not as expected. `--check` and `--dry-run` write nothing
+at all.
 
 ## Updating
 
@@ -161,7 +178,7 @@ with `./install-offline.sh --update-packages`.
 ```
 
 This restores every setting and file that was changed, removes the generated
-package and, after asking, the packages the installer added. A package that
+package and, after asking (`-y` answers yes), the packages the installer added. A package that
 other software has come to need is kept — APT's own simulation decides — so
 uninstalling never removes anything else.
 
@@ -177,12 +194,15 @@ The installer follows Debian's
   exists in your APT sources is refused. Raspberry Pi's file manager, the one
   package that would replace a Debian one, is repacked to run beside it under
   its own program name, so nothing of Debian's is removed or overwritten.
-* **Nothing is removed or upgraded as a side effect.** APT runs with
-  `--no-remove`, installed packages are never upgraded, and older versions never
-  replace newer ones.
-* **Everything is tracked by dpkg.** No files are copied into system
-  directories; the additions ship as a generated package, `pixflat-theme-debian`,
-  which APT removes cleanly.
+* **Nothing is removed to make room.** APT runs with `--no-remove`, and an older
+  version never replaces a newer one. The installer upgrades no package of its
+  own accord; APT may still update a Debian dependency from your own sources if
+  one of the packages requires a newer version.
+* **Everything is tracked by dpkg**, with two exceptions the uninstaller undoes:
+  the login screen settings in `/etc/lightdm/pi-greeter.conf` (the original is
+  kept and restored) and the list of packages it installed, in
+  `/var/lib/pixflat-theme`. Everything else ships as a generated package,
+  `pixflat-theme-debian`, which APT removes cleanly.
 * **Only official sources.** Downloads are limited to
   `https://archive.raspberrypi.org/` and `https://deb.debian.org/`; other
   addresses, plain HTTP and redirects are refused. Before installing, the
@@ -214,9 +234,10 @@ The installer follows Debian's
 [`packages/`](packages/) is a small APT repository covering Debian 11, 12 and 13
 on amd64, arm64, armhf and i386: the Raspberry Pi OS packages and the official
 Debian packages they need that a Debian desktop installation does not already
-have (about 320 MB, mostly wallpapers). `VERSIONS.md` lists the exact version and
-source of every file, and `install-offline.sh` checks each one against
-`SHA256SUMS` and installs with APT without going online.
+have (about 320 MB, mostly wallpapers). `VERSIONS.md` lists every package with
+its version and where it came from, `SHA256SUMS` covers every file, and
+`install-offline.sh` checks each file before installing it with APT, without
+going online.
 
 Rebuild it on a machine with internet access:
 
@@ -271,12 +292,12 @@ installed; only their values are applied.
 
 | Component | Packages |
 |-----------|----------|
-| GTK 2 engine and runtime | [gtk2-engines-pixbuf, libgtk2.0-bin, libgtk2.0-0](https://packages.debian.org/source/stable/gtk+2.0) |
+| GTK 2 engine and runtime | [gtk2-engines-pixbuf and the GTK 2 libraries](https://packages.debian.org/source/stable/gtk+2.0) |
 | Icon fallback themes | [gnome-icon-theme](https://packages.debian.org/stable/gnome-icon-theme), [adwaita-icon-theme-legacy](https://packages.debian.org/stable/adwaita-icon-theme-legacy) |
-| Fonts | [fonts-liberation](https://packages.debian.org/stable/fonts-liberation) |
+| Fonts | [fonts-liberation](https://packages.debian.org/stable/fonts-liberation) (`fonts-liberation2` on Debian 11 and 12) |
 | Sounds | [sound-theme-freedesktop](https://packages.debian.org/stable/sound-theme-freedesktop) |
 | Help menu | [debian-reference-common](https://packages.debian.org/stable/debian-reference-common), [debian-reference-en](https://packages.debian.org/stable/debian-reference-en) |
-| Tray applets | [network-manager-applet](https://packages.debian.org/stable/network-manager-applet), [blueman](https://packages.debian.org/stable/blueman), installed only if NetworkManager or BlueZ is |
+| Tray applets | [network-manager-applet](https://packages.debian.org/stable/network-manager-applet) (`network-manager-gnome` on Debian 11 and 12), only if NetworkManager is installed; [blueman](https://packages.debian.org/stable/blueman) only if BlueZ is, and only with Debian's panel |
 | Debian logo | [desktop-base](https://packages.debian.org/stable/desktop-base), already part of a Debian desktop |
 
 ## Credits
