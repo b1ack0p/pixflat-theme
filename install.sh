@@ -2866,7 +2866,7 @@ apply_de_lxde() {
 	_ini_set "$f" desktop desktop_bg "$T_DESK_BG" desktop_fg "$T_DESK_FG" desktop_shadow "$T_DESK_SHADOW" show_wm_menu 0
 	if [[ -n $A_WALL ]]; then _ini_set "$f" desktop wallpaper_mode crop wallpaper "$A_WALL"; fi
 	_ini_set "$f" ui always_show_tabs 0 max_tab_chars 32 win_width 640 win_height 480 splitter_pos 150 \
-		side_pane_mode dirtree view_mode icon show_hidden 0 sort "name;ascending;" columns "name;size;mtime;" \
+		side_pane_mode places view_mode icon show_hidden 0 sort "name;ascending;" columns "name;size;mtime;" \
 		toolbar "newtab;navigation;home;" show_statusbar 1 pathbar_mode_buttons 0
 	# Raspberry Pi OS leaves removable media to the panel's eject plugin
 	_ini_set "$f" volume mount_on_startup 0 mount_removable 0 autorun 0
