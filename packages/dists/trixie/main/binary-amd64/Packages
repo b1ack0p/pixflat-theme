@@ -381,6 +381,21 @@ Size: 20648
 SHA256: 1237eaee948d1eaaf3c838ec649cce2bda91ff12471f7444b14cb4c4c0f49552
 Description: GUI command-line application launcher for Raspberry Pi
 
+Package: pcmanfm-pi
+Version: 1.7
+Architecture: amd64
+Depends: libatk1.0-0t64 (>= 1.12.4), libc6 (>= 2.34), libcairo2 (>= 1.10.0), libgdk-pixbuf-2.0-0 (>= 2.22.0), libglib2.0-0t64 (>= 2.80.0), libgtk-3-0t64 (>= 3.21.5), libgtk-layer-shell0 (>= 0.6.0), libmenu-cache3 (>= 0.5.0), libpango-1.0-0 (>= 1.20.0), libpangocairo-1.0-0 (>= 1.14.0), libx11-6
+Recommends: gvfs-backends, gvfs-fuse, lxpolkit | polkit-1-auth-agent | policykit-1-gnome, pixflat-icons | pixtrix-icons
+Installed-Size: 3724
+Maintainer: Simon Long <simon@raspberrypi.com>
+Section: utils
+Priority: optional
+Multi-Arch: no
+Filename: pool/files/pcmanfm-pi_1.7_amd64+beside.deb
+Size: 333932
+SHA256: 82d83e4da87fb37fca1834a254736e9a0f100c6a44882866d9a5b601a3fa7a8e
+Description: extremely fast and lightweight file manager
+
 Package: rpd-common
 Version: 1.30
 Architecture: amd64
@@ -443,6 +458,24 @@ Filename: pool/panel/debian-reference-en_2.127_all.deb
 Size: 1747040
 SHA256: 81d62f642c571dd5ad2de4aa56ba953c488fc9a0aaf0336dc4ef120ff9e367ce
 Description: Debian system administration guide, English original
+
+Package: libfm-extra4t64
+Version: 1.4.0-2
+Architecture: amd64
+Depends: libc6 (>= 2.14), libglib2.0-0t64 (>= 2.80.0)
+Breaks: libfm-extra4 (<< 1.4.0-2)
+Replaces: libfm-extra4
+Provides: libfm-extra4 (= 1.4.0-2)
+Installed-Size: 66
+Maintainer: Debian LXDE Maintainers <team+lxde@tracker.debian.org>
+Section: libs
+Priority: optional
+Multi-Arch: same
+Source: libfm
+Filename: pool/dependencies/libfm-extra4t64_1.4.0-2_amd64.deb
+Size: 28132
+SHA256: 86f4cdb35c714cce30f8c56fea9ed0f44e8f391b1da4984ae12e57ac6e3a8e85
+Description: file management support (extra library)
 
 Package: libgtk-layer-shell0
 Version: 0.9.0-2
@@ -508,4 +541,37 @@ Filename: pool/engines/libgtk2.0-common_2.24.33-7_all.deb
 Size: 2661068
 SHA256: f874797252735a9d0d14e6e6baf93e7c1ea7b2bc7ee44ef7ec09fb715bfbc9e6
 Description: common files for the GTK graphical user interface library
+
+Package: libmenu-cache-bin
+Version: 1.1.1-1
+Architecture: amd64
+Depends: libc6 (>= 2.34), libfm-extra4t64 (>= 1.2.0), libglib2.0-0t64 (>= 2.76.0)
+Breaks: libmenu-cache1, libmenu-cache3 (<< 0.6.0)
+Replaces: libmenu-cache1
+Installed-Size: 97
+Maintainer: Debian LXDE Maintainers <team+lxde@tracker.debian.org>
+Section: libs
+Priority: optional
+Multi-Arch: foreign
+Source: menu-cache
+Filename: pool/dependencies/libmenu-cache-bin_1.1.1-1_amd64.deb
+Size: 32728
+SHA256: 04aa50e36f12aa0b9b4201cb8467199bdbcc62af3c35dc643efe04653b7b7d74
+Description: LXDE implementation of the freedesktop Menu's cache (libexec)
+
+Package: libmenu-cache3
+Version: 1.1.1-1
+Architecture: amd64
+Depends: libmenu-cache-bin (>= 0.7.0), libc6 (>= 2.14), libglib2.0-0t64 (>= 2.76.0)
+Conflicts: libmenu-cache1
+Installed-Size: 61
+Maintainer: Debian LXDE Maintainers <team+lxde@tracker.debian.org>
+Section: libs
+Priority: optional
+Multi-Arch: same
+Source: menu-cache
+Filename: pool/dependencies/libmenu-cache3_1.1.1-1_amd64.deb
+Size: 18648
+SHA256: a919a0ec9710bc1d04abacdba63049ba1ea15fe0cb7c2c4870777ca3d9844956
+Description: LXDE implementation of the freedesktop Menu's cache
 

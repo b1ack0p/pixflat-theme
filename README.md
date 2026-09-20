@@ -104,9 +104,10 @@ and PiX, Nunito Sans for PiXtrix and PiXonyx.
 The values are the ones Raspberry Pi OS itself uses, taken from its
 configuration packages (`raspberrypi-ui-mods` for Bookworm, `rpd-common`,
 `rpd-x-core` and `rpd-wayland-core` for Trixie). Debian's own programs are used,
-except on Debian 13 with LXDE, where Raspberry Pi's own panel and its Shutdown
-and Run dialogs are installed (they are built for Debian 13). Raspberry Pi's modified
-file manager and system tools are never installed.
+except on Debian 13, where Raspberry Pi's own panel with its Shutdown and Run
+dialogs (LXDE) and its file manager are installed (they are built for Debian 13).
+Raspberry Pi's system tools are never installed, and no Debian package is ever
+replaced: the file manager is repacked to run beside Debian's.
 
 | Area | Raspberry Pi OS settings applied |
 |------|----------------------------------|
@@ -120,7 +121,8 @@ file manager and system tools are never installed.
 | Tray applets (LXDE) | `nm-applet` for the network icon is installed if NetworkManager is; `blueman` for Bluetooth if BlueZ is, on Debian 11 and 12 (the Raspberry Pi panel on Debian 13 has its own Bluetooth plugin). Tray applets Raspberry Pi OS does not show (clipboard managers such as Diodon, other volume applets, `blueman` with the Raspberry Pi panel) are hidden once for your user, not removed; enable one again in *Desktop Session Settings* and it stays |
 | Login screen | when LightDM is installed (`--no-lightdm` to skip): **Raspberry Pi's own greeter** (`pi-greeter`), so the login box, its layout and the background are the same as on Raspberry Pi OS. Its settings match the official `pi-greeter.conf` (background colour, the `RPiSystem` wallpaper cropped, theme, icons and font), with the Debian logo instead of the Raspberry Pi one. The original `/etc/lightdm/pi-greeter.conf` is kept and restored by `--uninstall`. Where that greeter cannot run, Debian's LightDM GTK greeter is styled to look as close as possible instead |
 | Application menu (LXDE) | Raspberry Pi OS categories and order: Programming, Education, Science, Office, Internet, Sound & Video, Graphics, Games, Other, System Tools, Accessories, then Help, Preferences, Run and Shutdown; Help holds Debian Reference (`debian-reference-common`), as Raspberry Pi OS puts its documentation there; empty categories are hidden until an application of that category is installed. The menu is kept up to date by later runs unless you edit it with a menu editor |
-| File manager (PCManFM) | the settings of Raspberry Pi OS 13's own file manager (`pcmanfm-pi`), key for key: 640×480 window, side pane at 150, folder tree side pane, icon view with thumbnails, new tab/navigation/home toolbar, status bar, single click off, trash and delete confirmation on; icons 48 px, small and side pane icons 24 px, thumbnails 80 px; places: home, root and drives; removable media left to the panel's eject plugin. Raspberry Pi's file manager itself is a fork that replaces Debian's, so it is not installed and its toolbar differs |
+| File manager (PCManFM, Debian 13) | **Raspberry Pi's own file manager** (`pcmanfm-pi`), which draws the desktop and opens your folders, with its Sort menu, its side pane (places and folder tree), its view buttons (icons, list, compact, thumbnails) and its toolbar. It ships as a replacement for Debian's file manager (same program name, same data files), so the installer repacks it to run **beside** Debian's instead, as `pcmanfm-pi`: the program is installed under that name and its data directory is renamed, and the files Debian's package already provides (the identical toolbar icons, the translations of the same message domain) are left out. Debian's `pcmanfm` is neither removed nor changed, so a Debian upgrade cannot collide with it. Debian's file manager stays available, and `--no-file-manager` keeps it as the only one |
+| File manager settings | the settings of Raspberry Pi OS 13, key for key: 640×480 window, side pane at 150, icon view with thumbnails, new tab/navigation/home toolbar, status bar, single click off, trash and delete confirmation on; icons 48 px, small and side pane icons 24 px, thumbnails 80 px; places: home, root and drives; removable media left to the panel's eject plugin. They are written for both file managers, so Debian 11 and 12, where Raspberry Pi's is not built, get the same settings in Debian's |
 | Desktop | wallpaper, desktop colours and font, trash and drive icons, no documents icon; the desktop is restarted so the settings (and the Desktop Preferences dialog) follow at once |
 | Sounds | event and input feedback sounds with the freedesktop sound theme |
 
@@ -139,8 +141,9 @@ through their own settings system:
 The panel and application menu are set up on the **first installation only**,
 and each extra tray applet is hidden only once. Plugins and applets you add or
 remove later are kept when you update or change the look. Every change to your settings is backed up first; `--uninstall`
-restores them (and switches back to Debian's panel). Use `--no-panel` to keep
-your panel and menu, and `--no-font` to keep your fonts.
+restores them (and switches back to Debian's panel and file manager). Use
+`--no-panel` to keep your panel and menu, `--no-file-manager` to keep Debian's
+file manager as the only one, and `--no-font` to keep your fonts.
 
 Updater and power plugins are not used: they need Raspberry Pi system tools or
 hardware. Raspberry Pi OS has no battery icon set, so desktop power managers
@@ -174,6 +177,7 @@ All options are optional; they override what is detected.
     --4k             use the 4K wallpaper set instead (about 100 MB)
     --no-font        keep your current fonts
     --no-panel       keep your panel and application menu
+    --no-file-manager  keep Debian's file manager as the only one
     --no-gtk4        no GTK 4/libadwaita colour layer
     --no-lightdm     keep the login screen as it is
     --qt             make Qt applications follow the GTK theme
@@ -283,12 +287,16 @@ The installer follows [DontBreakDebian](https://wiki.debian.org/DontBreakDebian)
 
 * **No FrankenDebian:** no Raspberry Pi (or any other) APT source is added. Only
   individual, verified leaf packages are installed: themes, icons, fonts,
-  wallpapers, GTK 2 theme engines and, on Debian 13 with LXDE, Raspberry Pi's
-  panel, its plugins and its Shutdown and Run dialogs.
+  wallpapers, GTK 2 theme engines and, on Debian 13, Raspberry Pi's file manager
+  and, with LXDE, its panel, plugins and Shutdown and Run dialogs.
 * **Nothing from Debian is replaced:** the installer refuses any Raspberry Pi
   package whose name also exists in your APT sources. Packages the Raspberry Pi
   archive rebuilds from Debian (such as `gtk2-engines-pixbuf +rpt1`) are never
-  used; Debian's own are.
+  used; Debian's own are. Raspberry Pi's file manager, the one package that
+  declares `Breaks`/`Replaces` on a Debian package (`pcmanfm`), is repacked to
+  run beside it as `pcmanfm-pi`, with its own program name and data directory
+  and without those fields, so it neither removes nor overwrites anything of
+  Debian's.
 * **Nothing is removed or upgraded as a side effect:** APT runs with
   `--no-remove`, installed packages are never upgraded, and older versions never
   replace newer ones.

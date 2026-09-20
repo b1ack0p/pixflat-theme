@@ -156,6 +156,8 @@ O_4K=0
 O_PANEL=1
 O_GTK4=1
 O_PI_PANEL=0            # 1 when Raspberry Pi's own panel (lxpanel-pi) is used
+O_FM=1
+O_PI_FM=0               # 1 when Raspberry Pi's own file manager is used
 O_WITH_FONT=1
 O_LIGHTDM=-1           # -1 = when Debian's LightDM GTK greeter is installed
 O_QT=0
@@ -269,6 +271,8 @@ Options:
       --no-font           Do not install or set the Raspberry Pi UI font.
       --no-panel          Keep your panel and application menu (default: the
                           Raspberry Pi OS layout).
+      --no-file-manager   Keep Debian's file manager for the desktop and folders
+                          (default: Raspberry Pi's, installed beside it on Debian 13).
       --no-gtk4           Do not add the theme colours for GTK 4/libadwaita applications.
       --no-lightdm        Keep the login screen as it is (default: the Raspberry Pi
                           OS style, when the LightDM GTK greeter is installed).
@@ -320,6 +324,7 @@ parse_args() {
 			--4k)           O_4K=1 ;;
 			--no-font)      O_WITH_FONT=0 ;;
 			--no-panel)     O_PANEL=0 ;;
+			--no-file-manager) O_FM=0 ;;
 			--no-gtk4)      O_GTK4=0 ;;
 			--no-lightdm)   O_LIGHTDM=0 ;;
 			--qt)           O_QT=1 ;;
@@ -409,7 +414,13 @@ _bundle_rpi_pkgs() {
 	printf '%s\n' pixflat-theme pixflat-icons gtk2-engines-pixflat fonts-piboto rpd-wallpaper \
 		rpd-wallpaper-4k pix-theme rpd-icons gtk2-engines-clearlookspix pi-greeter \
 		pixtrix-theme pixtrix-icons fonts-nunito-sans rpd-wallpaper-trixie rpd-wallpaper-trixie-4k
-	if (( $(_suite_rank "$1") >= 3 )); then _pi_panel_pkgs; fi
+	if (( $(_suite_rank "$1") >= 3 )); then _pi_panel_pkgs; _pi_fm_pkgs "$1"; fi
+}
+# Raspberry Pi's own file manager, which draws the desktop and the folder
+# windows of Raspberry Pi OS. It is built for Debian 13 only, and is installed
+# beside Debian's file manager, never in its place (see fm_coinstall).
+_pi_fm_pkgs() {
+	if (( $(_suite_rank "$1") >= 3 )); then printf '%s\n' pcmanfm-pi; fi
 }
 # Raspberry Pi's own panel (Debian 13 and later) with the plugins that work on
 # Debian, its Shutdown dialog (log out, reboot, shut down; at the end of the
@@ -1013,6 +1024,48 @@ compat_fix() {
 	printf '%s\n' "$out"
 }
 
+# Raspberry Pi's file manager ships as a drop-in replacement for Debian's: the
+# same program name, the same data files, and Breaks/Replaces on pcmanfm, so
+# APT would remove it. Repack it to run beside Debian's instead, as
+# pcmanfm-pi: the program is installed under that name, its data directory is
+# renamed (the path is rewritten inside the program, in place, so the file
+# keeps its layout), and the files Debian's package already provides (the
+# toolbar icons, which are identical, and the translations, which the same
+# message domain covers) are left out. Debian's file manager is untouched, so
+# a Debian upgrade cannot collide with it. Prints the path to install.
+fm_coinstall() {
+	local deb=$1 dir out stamp
+	local from=/usr/share/pcmanfm/    # the data directory compiled into it
+	local to=/usr/share/pcmanpi/      # same length, so it replaces it in place
+	[[ $(dpkg-deb -f "$deb" Package) == pcmanfm-pi ]] || { printf '%s\n' "$deb"; return 0; }
+	dir="$WORKDIR/repack/$(basename "$deb" .deb)"
+	out="$WORKDIR/debs/$(basename "$deb" .deb)+beside.deb"
+	rm -rf -- "$dir"; mkdir -p "$(dirname "$dir")" "$WORKDIR/debs"
+	dpkg-deb -R "$deb" "$dir"
+	stamp=$(stat -c %Y "$dir/DEBIAN/control")
+	[[ -f $dir/usr/bin/pcmanfm ]] || die "$(basename "$deb") does not contain /usr/bin/pcmanfm"
+	FROM=$from TO=$to perl -0777 -pe 'BEGIN { binmode STDIN; binmode STDOUT }
+		s/\Q$ENV{FROM}\E/$ENV{TO}/g' <"$dir/usr/bin/pcmanfm" >"$dir/usr/bin/pcmanfm-pi"
+	chmod 0755 "$dir/usr/bin/pcmanfm-pi"
+	rm -f -- "$dir/usr/bin/pcmanfm"
+	mv -- "$dir$from" "$dir$to"
+	sed -E 's/^(Exec|TryExec)=pcmanfm/\1=pcmanfm-pi/' "$dir/usr/share/applications/pcmanfm.desktop" \
+		>"$dir/usr/share/applications/pcmanfm-pi.desktop"
+	rm -f -- "$dir/usr/share/applications/pcmanfm.desktop"
+	mv -- "$dir/usr/share/man/man1/pcmanfm.1.gz" "$dir/usr/share/man/man1/pcmanfm-pi.1.gz"
+	rm -rf -- "${dir:?}/usr/share/locale" "${dir:?}/usr/share/icons" "${dir:?}/etc"
+	# Its conffile and maintainer script belong to the files left out above
+	rm -f -- "$dir/DEBIAN/conffiles" "$dir/DEBIAN/postinst"
+	sed -i -E '/^(Breaks|Replaces|Conflicts|Provides):/d' "$dir/DEBIAN/control"
+	( cd "$dir" && find . -path ./DEBIAN -prune -o -type f -print0 | sort -z \
+		| xargs -0r md5sum | sed 's| \./| |' >DEBIAN/md5sums )
+	chmod 0644 "$dir/DEBIAN/md5sums"
+	find "$dir" -exec touch -d "@$stamp" {} +
+	SOURCE_DATE_EPOCH=$stamp dpkg-deb --root-owner-group -b "$dir" "$out" >/dev/null
+	chmod 0644 "$out"
+	printf '%s\n' "$out"
+}
+
 # Print the installed version of a package, or nothing.
 _installed_version() {
 	{ dpkg-query -W -f='${db:Status-Abbrev} ${Version}\n' "$1" 2>/dev/null || true; } | awk '$1 ~ /^.i/ { print $2 }'
@@ -1503,7 +1556,7 @@ EOF_TRIG
 # Stop if a required tool is missing.
 preflight_tools() {
 	local t missing=()
-	for t in dpkg-deb gpgv base64 sha256sum awk sed gzip; do
+	for t in dpkg-deb gpgv base64 sha256sum awk sed gzip perl; do
 		command -v "$t" >/dev/null || missing+=("$t")
 	done
 	if [[ -z $O_REPO || $O_ACTION == update-packages ]] && ! command -v curl >/dev/null && ! command -v wget >/dev/null; then
@@ -1547,11 +1600,16 @@ resolve_all() {
 			rpd-wallpaper*)    (( walls && ! O_4K )) || continue ;;
 		esac
 		wanted+=("$p")
-	done < <(_bundle_rpi_pkgs "$H_SUITE" | grep -vxF -f <(_pi_panel_pkgs))
+	done < <(_bundle_rpi_pkgs "$H_SUITE" | grep -vxF -f <(_pi_panel_pkgs; _pi_fm_pkgs "$H_SUITE"))
 	# Raspberry Pi's own panel, on Debian 13 and later where Debian's LXDE panel
 	# is installed (it replaces that panel in the LXDE session)
 	if (( O_PANEL && $(_suite_rank "$H_SUITE") >= 3 )) && [[ -n $(_installed_version lxpanel) ]]; then
 		mapfile -t -O "${#wanted[@]}" wanted < <(_pi_panel_pkgs)
+	fi
+	# Raspberry Pi's own file manager, where Debian's is installed; it is
+	# repacked to run beside it, as pcmanfm-pi (see fm_coinstall)
+	if (( O_FM )) && [[ -n $(_installed_version pcmanfm) ]]; then
+		mapfile -t -O "${#wanted[@]}" wanted < <(_pi_fm_pkgs "$H_SUITE")
 	fi
 	if [[ -n $O_ONLY && " ${wanted[*]} " != *" $(_theme_pkg "$O_ONLY") "* ]]; then
 		die "$O_ONLY is not available for Debian $H_SUITE/$H_ARCH"
@@ -1767,7 +1825,7 @@ install_all() {
 			log "   [dry-run] fetch $(_archive_url "${PKG_AID[$p]}")/${PKG_FILE[$p]}"
 		else
 			f=$(download_pkg "$p")
-			[[ -n $O_REPO ]] || f=$(compat_fix "$f")   # ./packages is adapted already
+			[[ -n $O_REPO ]] || f=$(fm_coinstall "$(compat_fix "$f")")   # ./packages is adapted already
 			files+=("$f")
 		fi
 	done
@@ -1865,6 +1923,7 @@ _pkg_category() {
 	case $1 in
 		sound-theme-*)               echo sounds ;;
 		pi-greeter)                  echo greeter ;;
+		pcmanfm-pi)                  echo files ;;
 		lxpanel-pi|lpplug-*|pplug-*|pishutdown|gui-runcmd|debian-reference-*|network-manager-gnome|network-manager-applet|nm-connection-editor|blueman) echo panel ;;
 		*icon-theme*|*-icons)        echo icons ;;
 		*-theme)                     echo themes ;;
@@ -2018,7 +2077,7 @@ build_offline_repo() {
 				p=${rpis[i]} i=$(( i + 1 ))
 				resolve_pkg "$p" rpi || die "$p is not available for $suite/$arch"
 				f=$(download_pkg "$p")
-				f=$(compat_fix "$f")
+				f=$(fm_coinstall "$(compat_fix "$f")")
 				got+=("$f")
 				_stage_pkg "$stage" "$idx" "$p" "$f"
 				ok "$p ${PKG_VER[$p]} (Raspberry Pi OS ${PKG_SUITE[$p]})"
@@ -2340,7 +2399,7 @@ _panel_tasks() {
 	local id
 	local -a buttons=()
 	for id in "$(_launcher x-www-browser.desktop lxde-x-www-browser.desktop firefox-esr.desktop chromium.desktop)" \
-		"$(_launcher pcmanfm.desktop)" "$(_launcher x-terminal-emulator.desktop lxterminal.desktop lxde-x-terminal-emulator.desktop)"; do
+		"$(_launcher pcmanfm-pi.desktop pcmanfm.desktop)" "$(_launcher x-terminal-emulator.desktop lxterminal.desktop lxde-x-terminal-emulator.desktop)"; do
 		if [[ -n $id ]]; then buttons+=("Button {" "  id=$id" "}"); fi
 	done
 	_panel_plugin space Size=4
@@ -2529,6 +2588,71 @@ _lxsession_panel() {
 		/^@?lxpanel(-pi)?([ \t]|$)/ { if (!done) print "@" ENVIRON["P"]; done = 1; next }
 		{ print }
 		END { if (!done) print "@" ENVIRON["P"] }' | _write "$file"
+}
+
+# Draw the desktop with the given file manager in the LXDE session.
+# Usage: _lxsession_desktop SESSION PROGRAM
+_lxsession_desktop() {
+	local file=$HOME/.config/lxsession/$1/autostart
+	_seed "$file" "/etc/xdg/lxsession/$1/autostart" /etc/xdg/lxsession/LXDE/autostart || true
+	if (( O_DRY_RUN )); then log "   [dry-run] $file: draw the desktop with $2"; return 0; fi
+	_track_file "$file"
+	{ [[ -f $file ]] && cat -- "$file"; true; } | P="@$2 --desktop --profile $1" awk '
+		/^@?pcmanfm(-pi)?([ \t]|$)/ { if (!done) print ENVIRON["P"]; done = 1; next }
+		{ print }
+		END { if (!done) print ENVIRON["P"] }' | _write "$file"
+}
+
+# Write the file manager settings of Raspberry Pi OS (pcmanfm-pi's
+# pcmanfm.conf). Usage: _fm_conf FILE SESSION
+_fm_conf() {
+	local f=$1
+	_seed "$f" "/etc/xdg/pcmanfm/$2/pcmanfm.conf" /etc/xdg/pcmanfm/LXDE/pcmanfm.conf /etc/xdg/pcmanfm/default/pcmanfm.conf || true
+	# Defaults for monitors without their own desktop-items file
+	_ini_set "$f" desktop desktop_bg "$T_DESK_BG" desktop_fg "$T_DESK_FG" desktop_shadow "$T_DESK_SHADOW" show_wm_menu 0
+	if [[ -n $A_WALL ]]; then _ini_set "$f" desktop wallpaper_mode crop wallpaper "$A_WALL"; fi
+	_ini_set "$f" ui always_show_tabs 0 max_tab_chars 32 win_width 640 win_height 480 splitter_pos 150 \
+		view_mode icon show_hidden 0 sort "name;ascending;" columns "name;size;mtime;" \
+		toolbar "newtab;navigation;home;" show_statusbar 1 pathbar_mode_buttons 0
+	# Raspberry Pi OS leaves removable media to the panel's eject plugin
+	_ini_set "$f" volume mount_on_startup 0 mount_removable 0 autorun 0
+	_ini_set "$f" config bm_open_method 0
+	if (( O_PI_FM )); then
+		# Raspberry Pi's file manager keeps in this file what Debian's keeps in
+		# libfm.conf: its own menus, side pane and icon sizes
+		_ini_set "$f" config cutdown_menus 1 real_expanders 1 single_click 0 use_trash 1 confirm_del 1 \
+			thumbnail_local 1 thumbnail_max 2048 terminal "x-terminal-emulator %s"
+		_ini_set "$f" ui big_icon_size 48 small_icon_size 24 thumbnail_size 80 pane_icon_size 24 show_thumbnail 1
+		_ini_set "$f" places places_home 1 places_desktop 0 places_root 1 places_computer 0 places_trash 0 \
+			places_applications 0 places_network 0 places_unmounted 1 places_volmounts 1
+	else
+		_ini_set "$f" ui side_pane_mode places
+	fi
+}
+
+# Make Raspberry Pi's file manager the one the desktop uses: the default for
+# folders and the Desktop Preferences dialog, and the only File Manager entry
+# in the application menu (Debian's is hidden for this user, not removed).
+_pi_fm_entries() {
+	local d=$HOME/.local/share/applications f=/usr/share/applications/pcmanfm-desktop-pref.desktop
+	if (( O_DRY_RUN )); then log "   [dry-run] default file manager: pcmanfm-pi"; return 0; fi
+	# Its menu entry, named and filed as Raspberry Pi OS names and files it
+	# (rpd-common's raspi-ui-overrides): "File Manager", in Accessories
+	if [[ -f /usr/share/applications/pcmanfm-pi.desktop && ! -e $d/pcmanfm-pi.desktop ]] && _once fm:launcher; then
+		_track_file "$d/pcmanfm-pi.desktop"
+		sed -E 's/^Name=.*/Name=File Manager/; s/^Categories=.*/Categories=FileTools;FileManager;Utility;Core;GTK;/' \
+			/usr/share/applications/pcmanfm-pi.desktop | _write "$d/pcmanfm-pi.desktop"
+	fi
+	if [[ ! -e $d/pcmanfm.desktop ]] && _once fm:menu-entry; then
+		_track_file "$d/pcmanfm.desktop"
+		printf '[Desktop Entry]\nType=Application\nName=PCMan File Manager\nExec=pcmanfm %%U\nNoDisplay=true\n' \
+			| _write "$d/pcmanfm.desktop"
+	fi
+	if [[ -f $f && ! -e $d/${f##*/} ]] && _once fm:desktop-pref; then
+		_track_file "$d/${f##*/}"
+		sed -E 's/^(Exec|TryExec)=pcmanfm/\1=pcmanfm-pi/' "$f" | _write "$d/${f##*/}"
+	fi
+	_ini_set "$HOME/.config/mimeapps.list" 'Default Applications' inode/directory pcmanfm-pi.desktop
 }
 
 # Write the Raspberry Pi OS application menu for LXDE: its category order,
@@ -2858,19 +2982,12 @@ apply_de_lxde() {
 		if [[ -n $T_FONT ]]; then _ini_set "$i" '*' desktop_font "$T_FONT"; fi
 		if [[ -n $A_WALL ]]; then _ini_set "$i" '*' wallpaper_mode crop wallpaper_common 1 wallpaper "$A_WALL"; fi
 	done
-	# File manager (pcmanfm-pi's pcmanfm.conf) and icon sizes (libfm.conf, where
-	# Debian's file manager keeps what Raspberry Pi's fork holds in its own file)
-	f=$HOME/.config/pcmanfm/$sess/pcmanfm.conf
-	_seed "$f" "/etc/xdg/pcmanfm/$sess/pcmanfm.conf" /etc/xdg/pcmanfm/LXDE/pcmanfm.conf /etc/xdg/pcmanfm/default/pcmanfm.conf || true
-	# Defaults for monitors without their own desktop-items file
-	_ini_set "$f" desktop desktop_bg "$T_DESK_BG" desktop_fg "$T_DESK_FG" desktop_shadow "$T_DESK_SHADOW" show_wm_menu 0
-	if [[ -n $A_WALL ]]; then _ini_set "$f" desktop wallpaper_mode crop wallpaper "$A_WALL"; fi
-	_ini_set "$f" ui always_show_tabs 0 max_tab_chars 32 win_width 640 win_height 480 splitter_pos 150 \
-		side_pane_mode places view_mode icon show_hidden 0 sort "name;ascending;" columns "name;size;mtime;" \
-		toolbar "newtab;navigation;home;" show_statusbar 1 pathbar_mode_buttons 0
-	# Raspberry Pi OS leaves removable media to the panel's eject plugin
-	_ini_set "$f" volume mount_on_startup 0 mount_removable 0 autorun 0
-	_ini_set "$f" config bm_open_method 0
+	# File manager. Debian's reads the session profile; Raspberry Pi's fork
+	# takes its window settings from the 'default' profile whatever profile it
+	# runs with, so both files are written.
+	_fm_conf "$HOME/.config/pcmanfm/$sess/pcmanfm.conf" "$sess"
+	if (( O_PI_FM )); then _fm_conf "$HOME/.config/pcmanfm/default/pcmanfm.conf" "$sess"; fi
+	# Icon sizes for Debian's file manager, which keeps them in libfm.conf
 	f=$HOME/.config/libfm/libfm.conf
 	_seed "$f" /etc/xdg/libfm/libfm.conf || true
 	_ini_set "$f" config cutdown_menus 1 real_expanders 1 single_click 0 use_trash 1 confirm_del 1 \
@@ -2903,14 +3020,23 @@ apply_de_lxde() {
 	if (( O_PANEL && O_PI_PANEL )) && [[ -f $rc ]]; then _pi_panel_keys "$rc"; fi
 	if (( O_PANEL && O_PI_PANEL )); then _pi_panel_css; ok "Raspberry Pi panel style for $T_GTK applied (tray icons, buttons)"; fi
 	if (( O_PANEL )); then _hide_extra_applets; fi
+	# Raspberry Pi's file manager draws the desktop and opens the folders
+	local fm=pcmanfm
+	if (( O_PI_FM )); then
+		fm=pcmanfm-pi
+		_lxsession_desktop "$sess" "$fm"
+		_pi_fm_entries
+		ok "Raspberry Pi file manager set up (desktop, folders and Desktop Preferences)"
+	fi
 	if [[ -n ${DISPLAY:-} ]]; then
 		if _running openbox; then run openbox --reconfigure || true; fi
 		# Restart the desktop: it keeps its settings in memory, so the new font,
 		# colours and wallpaper (and the Desktop Preferences dialog) would
 		# otherwise only follow at the next login
-		if _running pcmanfm; then
-			run pcmanfm --desktop-off || true
-			run setsid -f pcmanfm --desktop --profile "$sess" || true
+		if _running pcmanfm || _running pcmanfm-pi; then
+			run pcmanfm --desktop-off 2>/dev/null || true
+			if (( O_PI_FM )); then run pcmanfm-pi --desktop-off 2>/dev/null || true; fi
+			run setsid -f "$fm" --desktop --profile "$sess" || true
 			ok "Desktop restarted with the new settings"
 		fi
 		if (( O_PANEL && ! O_PI_PANEL )) && _running lxpanel; then run lxpanelctl restart || true; fi
@@ -3520,6 +3646,9 @@ _log_state() {
 		[[ -f /usr/share/applications/$f.desktop ]] && v+="$f "
 	done
 	log "    entries    ${v:-none installed}"
+	v=$(grep -h pcmanfm "$h/.config/lxsession"/*/autostart 2>/dev/null | paste -sd' ' - || true)
+	f=$(sed -n 's/^inode\/directory=//p' "$h/.config/mimeapps.list" 2>/dev/null || true)
+	log "    files      $([[ -x /usr/bin/pcmanfm-pi ]] && echo 'pcmanfm-pi installed' || echo "Debian's pcmanfm"), desktop: ${v:-nothing}, folders: ${f:-unset}"
 	v=$(sed -n 's/^gtk-icon-theme-name=//p' "$h/.config/gtk-3.0/settings.ini" 2>/dev/null || true)
 	log "    icons      ${v:-not set} (GTK 3)"
 	v=$(sed -n 's/^sNet\/ThemeName=//p; s/^sNet\/IconThemeName=/icons /p' "$h/.config/lxsession"/*/desktop.conf 2>/dev/null | paste -sd', ' - || true)
@@ -3570,6 +3699,7 @@ main() {
 	# compatibility package (it includes the login screen theme) and apply.
 	local applied=0
 	if [[ -x /usr/bin/lxpanel-pi ]] || { (( O_DRY_RUN )) && [[ " ${FETCH_PKGS[*]} " == *" lxpanel-pi "* ]]; }; then O_PI_PANEL=1; fi
+	if (( O_FM )) && { [[ -x /usr/bin/pcmanfm-pi ]] || { (( O_DRY_RUN )) && [[ " ${FETCH_PKGS[*]} " == *" pcmanfm-pi "* ]]; }; }; then O_PI_FM=1; fi
 	if (( O_DO_APPLY )) && choose_look; then applied=1; fi
 	if (( O_DO_INSTALL || (applied && O_LIGHTDM) )); then
 		prepare_root

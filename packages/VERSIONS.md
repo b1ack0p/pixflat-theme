@@ -1,6 +1,6 @@
 # Package versions
 
-Built by `install-offline.sh --update-packages` (pixflat-theme 2.0.0) on 2026-09-19 23:04 UTC from
+Built by `install-offline.sh --update-packages` (pixflat-theme 2.0.0) on 2026-09-20 01:35 UTC from
 https://archive.raspberrypi.org/debian and https://deb.debian.org/debian. Every file is listed in `SHA256SUMS`.
 
 | Package | Version | Releases | Source |
@@ -23,6 +23,7 @@ https://archive.raspberrypi.org/debian and https://deb.debian.org/debian. Every 
 | gtk2-engines-pixflat | 0.5+b1 | trixie | Raspberry Pi OS |
 | gtk2-engines-pixflat | 0.5 | bookworm | Raspberry Pi OS |
 | gui-runcmd | 0.3 | trixie | Raspberry Pi OS |
+| libfm-extra4t64 | 1.4.0-2 | trixie | Debian |
 | libgdk-pixbuf2.0-0 | 2.40.2-2 | bookworm | Debian |
 | libgdk-pixbuf-xlib-2.0-0 | 2.40.2-2 | bookworm | Debian |
 | libgtk2.0-0t64 | 2.24.33-7 | trixie | Debian |
@@ -32,6 +33,8 @@ https://archive.raspberrypi.org/debian and https://deb.debian.org/debian. Every 
 | libgtk-layer-shell0 | 0.9.0-2 | trixie | Debian |
 | liblightdm-gobject-1-0 | 1.26.0-7 | bullseye | Debian |
 | liblightdm-gobject-1-0 | 1.26.0-8 | bookworm | Debian |
+| libmenu-cache3 | 1.1.1-1 | trixie | Debian |
+| libmenu-cache-bin | 1.1.1-1 | trixie | Debian |
 | lpplug-batt | 1.10 | trixie | Raspberry Pi OS |
 | lpplug-bluetooth | 1.14 | trixie | Raspberry Pi OS |
 | lpplug-clock | 1.13 | trixie | Raspberry Pi OS |
@@ -40,6 +43,7 @@ https://archive.raspberrypi.org/debian and https://deb.debian.org/debian. Every 
 | lpplug-menu | 1.25 | trixie | Raspberry Pi OS |
 | lpplug-volumepulse | 1.19 | trixie | Raspberry Pi OS |
 | lxpanel-pi | 1.11 | trixie | Raspberry Pi OS |
+| pcmanfm-pi | 1.7 | trixie | Raspberry Pi OS |
 | pi-greeter | 0.16 | bullseye | Raspberry Pi OS |
 | pi-greeter | 0.25 | bookworm | Raspberry Pi OS |
 | pi-greeter | 1.3 | trixie | Raspberry Pi OS |
