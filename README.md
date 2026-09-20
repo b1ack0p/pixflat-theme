@@ -234,12 +234,12 @@ Examples:
      Bluetooth, and the current names for every icon the official sets carry under
      the old GNOME naming (`gnome-mime-application-pdf` also answers to
      `application-pdf`), plus the common file types (office documents, plain text,
-     unknown files). Each alias is a symlink to an official image. A set also falls
-     back to the other Raspberry Pi sets before GNOME, and the official sets get
-     the same names and fallbacks through a copy of their `index.theme` in your
-     home, so icons stay Raspberry Pi's whichever set is selected: 204 of the 708
-     standard icon names are served by Raspberry Pi artwork, against 144 to 188
-     with the official sets alone.
+     unknown files). Each alias is a symlink to an official image. The
+     legacy PiX also takes icons it lacks from PiXflat, the set closest to it in
+     style; otherwise each set keeps the fallback its own theme names (GNOME,
+     Adwaita), so no set is mixed with icons from another era. The official sets
+     get the same names and fallbacks through a copy of their `index.theme` in
+     your home, so the icons are the same whichever set is selected.
    * **Xfwm4 themes** for PiXflat, PiXnoir, PiXtrix, PiXonyx and PiX, generated from
      the colours and button bitmaps of the official Openbox themes.
    * the Raspberry Pi OS login screen style for the LightDM GTK greeter, with the

@@ -1203,6 +1203,14 @@ EOF
 # Icon overlay "<Base>-Debian": the official theme plus cursor-name aliases
 # ---------------------------------------------------------------------------
 
+# Print the other Raspberry Pi OS icon sets an icon set borrows from: only the
+# legacy PiX does, from PiXflat, the set closest to it in style. The others
+# keep the fallback the official theme itself names (GNOME, Adwaita), so no set
+# is mixed with icons from another era.
+_icon_fallbacks() {
+	case $1 in PiX) echo PiXflat ;; esac
+}
+
 # Link each missing cursor name to an equivalent official cursor. Repeated
 # passes let aliases build on each other.
 # Usage: _cursor_aliases BASE-CURSOR-DIR OUT-DIR BASE-NAME
@@ -1310,9 +1318,9 @@ gen_icon_overlay() {
 	inh=$(sed -n 's/^Inherits[[:space:]]*=[[:space:]]*//p' "$bdir/index.theme" | head -n1)
 	# An icon a set lacks comes from the other Raspberry Pi OS sets first, so
 	# that it still looks like Raspberry Pi OS instead of GNOME's fallback
-	local pi=""
-	for d in PiXtrix PiXflat PiX; do
-		[[ $d != "$base" && -f $SYS_ROOT/usr/share/icons/$d/index.theme ]] && pi+="$d,"
+	local pi="" d
+	for d in $(_icon_fallbacks "$base"); do
+		[[ -f $SYS_ROOT/usr/share/icons/$d/index.theme ]] && pi+="$d,"
 	done
 	inh=$(tr ',' '\n' <<<"$base,$pi$inh,Adwaita,hicolor" | awk 'NF && !seen[$0]++' | paste -sd, -)
 	{
@@ -2628,8 +2636,8 @@ _hide_official_icons() {
 		# names (the Debian logo, the cursor names and the icon names Debian's
 		# applets and file managers use), then the other Raspberry Pi sets.
 		inh="$b-Debian,"
-		for o in PiXtrix PiXflat PiX; do
-			[[ $o != "$b" && -d /usr/share/icons/$o ]] && inh+="$o,"
+		for o in $(_icon_fallbacks "$b"); do
+			[[ -d /usr/share/icons/$o ]] && inh+="$o,"
 		done
 		{ I=$inh awk '/^Hidden=/ { next }
 			/^Inherits[[:space:]]*=/ { sub(/^Inherits[[:space:]]*=[[:space:]]*/, ""); print "Inherits=" ENVIRON["I"] $0; found = 1; next }
